@@ -6,8 +6,8 @@ namespace RestaurantPOS.WPF.ViewModels
 {
     public class ShellWindowViewModel : BindableBase
     {
-        private string _currentDateTime;
-        private string _statusMessage;
+        private string _currentDateTime = string.Empty;
+        private string _statusMessage = string.Empty;
         private DispatcherTimer _timer;
 
         public string CurrentDateTime

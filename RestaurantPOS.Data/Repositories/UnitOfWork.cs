@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore.Storage;
+using RestaurantPOS.Core.Entities;
 using RestaurantPOS.Core.Interfaces;
 using RestaurantPOS.Data.Context;
 using System;
@@ -18,6 +19,13 @@ namespace RestaurantPOS.Data.Repositories
             _context = context;
             _repositories = new Dictionary<Type, object>();
         }
+
+        public IRepository<Space> SpaceRepository => Repository<Space>();
+        public IRepository<Table> TableRepository => Repository<Table>();
+        public IRepository<Category> CategoryRepository => Repository<Category>();
+        public IRepository<MenuItem> MenuItemRepository => Repository<MenuItem>();
+        public IRepository<Order> OrderRepository => Repository<Order>();
+        public IRepository<OrderDetail> OrderDetailRepository => Repository<OrderDetail>();
 
         public IRepository<T> Repository<T>() where T : class
         {

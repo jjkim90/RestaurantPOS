@@ -4,6 +4,8 @@ namespace RestaurantPOS.Core.Enums
     {
         Available,
         Occupied,
-        PaymentPending
+        PaymentPending,
+        Reserved,
+        Cleaning
     }
 }

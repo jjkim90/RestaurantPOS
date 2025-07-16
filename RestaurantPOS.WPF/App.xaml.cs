@@ -1,12 +1,18 @@
-﻿using DryIoc;
+﻿using AutoMapper;
+using DevExpress.Xpf.Core;
+using DryIoc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Prism.DryIoc;
 using Prism.Ioc;
+using Prism.Modularity;
 using RestaurantPOS.Core.Interfaces;
 using RestaurantPOS.Data.Context;
 using RestaurantPOS.Data.Repositories;
 using RestaurantPOS.Data.Seeders;
+using RestaurantPOS.Services;
+using RestaurantPOS.Services.Mappings;
+using RestaurantPOS.WPF.Modules.TableModule;
 using RestaurantPOS.WPF.Views;
 using Serilog;
 using System;
@@ -22,7 +28,18 @@ namespace RestaurantPOS.WPF
     {
         protected override Window CreateShell()
         {
+            // Set DevExpress Theme
+            ApplicationThemeHelper.ApplicationThemeName = Theme.Office2019ColorfulName;
+            
             return Container.Resolve<MainWindow>();
+        }
+
+        protected override void ConfigureModuleCatalog(IModuleCatalog moduleCatalog)
+        {
+            moduleCatalog.AddModule<TableModule>();
+            // Future modules can be added here
+            // moduleCatalog.AddModule<MenuModule>();
+            // moduleCatalog.AddModule<OrderModule>();
         }
 
         protected override void RegisterTypes(IContainerRegistry containerRegistry)
@@ -47,8 +64,15 @@ namespace RestaurantPOS.WPF
             // Seeder 등록
             containerRegistry.RegisterScoped<DatabaseSeeder>();
 
-            // Services 등록 (나중에 추가)
-            // containerRegistry.RegisterScoped<ITableService, TableService>();
+            // AutoMapper 설정
+            var config = new MapperConfiguration(cfg => {
+                cfg.AddProfile<MappingProfile>();
+            }, new Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory());
+            var mapper = config.CreateMapper();
+            containerRegistry.RegisterInstance<IMapper>(mapper);
+
+            // Services 등록
+            containerRegistry.RegisterScoped<ITableService, TableService>();
             // containerRegistry.RegisterScoped<IMenuService, MenuService>();
             // containerRegistry.RegisterScoped<IOrderService, OrderService>();
 
@@ -75,12 +99,20 @@ namespace RestaurantPOS.WPF
                     await seeder.SeedAsync();
                 }
 
+                // 초기 화면으로 TableManagementView 표시
+                var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
+                if (mainWindow != null)
+                {
+                    var tableView = Container.Resolve<RestaurantPOS.WPF.Modules.TableModule.Views.TableManagementView>();
+                    mainWindow.ContentRegion.Content = tableView;
+                }
+
                 Log.Information("애플리케이션이 성공적으로 초기화되었습니다.");
             }
             catch (Exception ex)
             {
                 Log.Fatal(ex, "애플리케이션 초기화 중 오류가 발생했습니다.");
-                MessageBox.Show($"애플리케이션 시작 중 오류가 발생했습니다.\n{ex.Message}", 
+                System.Windows.MessageBox.Show($"애플리케이션 시작 중 오류가 발생했습니다.\n{ex.Message}", 
                     "오류", MessageBoxButton.OK, MessageBoxImage.Error);
                 Current.Shutdown();
             }

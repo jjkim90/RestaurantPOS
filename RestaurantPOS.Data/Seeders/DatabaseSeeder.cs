@@ -55,21 +55,37 @@ namespace RestaurantPOS.Data.Seeders
                     {
                         SpaceId = systemSpace.SpaceId,
                         TableName = tableName,
-                        Status = "Available",
+                        TableNumber = int.Parse(tableName.Split('-')[1]),
+                        TableStatus = Core.Enums.TableStatus.Available,
                         IsEditable = false,
                         CreatedAt = DateTime.Now
                     });
                 }
 
-                // 3. 기본 공간 생성
-                var defaultSpace = new Space
+                // 3. 기본 공간 생성 - 홀1만 생성
+                var hall1Space = new Space
                 {
-                    SpaceName = "1층 홀",
+                    SpaceName = "홀1",
                     IsSystem = false,
                     IsActive = true,
                     CreatedAt = DateTime.Now
                 };
-                _context.Spaces.Add(defaultSpace);
+                _context.Spaces.Add(hall1Space);
+                await _context.SaveChangesAsync();
+                
+                // 홀1에 기본 테이블 6개 생성
+                for (int i = 1; i <= 6; i++)
+                {
+                    _context.Tables.Add(new Table
+                    {
+                        SpaceId = hall1Space.SpaceId,
+                        TableName = $"테이블{i}",
+                        TableNumber = i,
+                        TableStatus = Core.Enums.TableStatus.Available,
+                        IsEditable = true,
+                        CreatedAt = DateTime.Now
+                    });
+                }
                 await _context.SaveChangesAsync();
 
                 // 4. 카테고리 생성

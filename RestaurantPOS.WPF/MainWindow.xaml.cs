@@ -1,50 +1,68 @@
-﻿using Microsoft.EntityFrameworkCore;
-using RestaurantPOS.Data.Context;
-using System.Text;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+﻿using DevExpress.Xpf.Core;
+using Prism.Commands;
+using Prism.Mvvm;
+using System;
+using System.Windows.Threading;
 
 namespace RestaurantPOS.WPF
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow : ThemedWindow
     {
-        private readonly RestaurantContext _context;
-
-        public MainWindow(RestaurantContext context)
+        public MainWindow()
         {
             InitializeComponent();
-            _context = context;
-            Loaded += MainWindow_Loaded;
+            DataContext = new MainWindowViewModel();
+        }
+    }
+
+    public class MainWindowViewModel : BindableBase
+    {
+        private readonly DispatcherTimer _timer;
+        private string _currentTime = string.Empty;
+
+        public string CurrentTime
+        {
+            get { return _currentTime; }
+            set { SetProperty(ref _currentTime, value); }
         }
 
-        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                var spaceCount = await _context.Spaces.CountAsync();
-                var tableCount = await _context.Tables.CountAsync();
-                var categoryCount = await _context.Categories.CountAsync();
-                var menuCount = await _context.MenuItems.CountAsync();
+        // Commands
+        public DelegateCommand ExitCommand { get; }
+        public DelegateCommand NavigateTableCommand { get; }
+        public DelegateCommand NavigateMenuCommand { get; }
+        public DelegateCommand NavigateEmployeeCommand { get; }
+        public DelegateCommand DailySalesCommand { get; }
+        public DelegateCommand MonthlySalesCommand { get; }
+        public DelegateCommand AboutCommand { get; }
 
-                DbInfoText.Text = $"공간: {spaceCount}개\n" +
-                                 $"테이블: {tableCount}개\n" +
-                                 $"카테고리: {categoryCount}개\n" +
-                                 $"메뉴: {menuCount}개";
-            }
-            catch (Exception ex)
+        public MainWindowViewModel()
+        {
+            // Initialize commands
+            ExitCommand = new DelegateCommand(() => System.Windows.Application.Current.Shutdown());
+            NavigateTableCommand = new DelegateCommand(() => { /* Navigation will be handled by modules */ });
+            NavigateMenuCommand = new DelegateCommand(() => { /* TODO: Navigate to menu module */ });
+            NavigateEmployeeCommand = new DelegateCommand(() => { /* TODO: Navigate to employee module */ });
+            DailySalesCommand = new DelegateCommand(() => { /* TODO: Show daily sales */ });
+            MonthlySalesCommand = new DelegateCommand(() => { /* TODO: Show monthly sales */ });
+            AboutCommand = new DelegateCommand(ShowAbout);
+
+            // Setup timer for current time
+            _timer = new DispatcherTimer
             {
-                DbInfoText.Text = $"데이터 조회 오류: {ex.Message}";
-            }
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _timer.Tick += (s, e) => CurrentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            _timer.Start();
+        }
+
+        private void ShowAbout()
+        {
+            DXMessageBox.Show("Restaurant POS System v1.0\n\n음식점 주문 관리 시스템", "정보", 
+                System.Windows.MessageBoxButton.OK, 
+                System.Windows.MessageBoxImage.Information);
         }
     }
 }

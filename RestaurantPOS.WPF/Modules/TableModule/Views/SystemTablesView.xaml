@@ -1,0 +1,143 @@
+<UserControl x:Class="RestaurantPOS.WPF.Modules.TableModule.Views.SystemTablesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:dx="http://schemas.devexpress.com/winfx/2008/xaml/core"
+             xmlns:dxlc="http://schemas.devexpress.com/winfx/2008/xaml/layoutcontrol"
+             xmlns:dxmvvm="http://schemas.devexpress.com/winfx/2008/xaml/mvvm"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <UserControl.Resources>
+        <!-- Table Tile Style -->
+        <Style x:Key="SystemTableTileStyle" TargetType="dxlc:Tile">
+            <Setter Property="Width" Value="180"/>
+            <Setter Property="Height" Value="120"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Size" Value="Small"/>
+        </Style>
+        
+        <!-- Table Content Template -->
+        <DataTemplate x:Key="SystemTableContentTemplate">
+            <Border BorderBrush="{Binding BorderColor}" 
+                    BorderThickness="2" 
+                    CornerRadius="5">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Header -->
+                    <Border Grid.Row="0" 
+                            Background="{Binding HeaderColor}"
+                            Height="30">
+                        <TextBlock Text="{Binding DisplayName}" 
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"
+                                   FontSize="14" 
+                                   FontWeight="Bold"
+                                   Foreground="White"/>
+                    </Border>
+                    
+                    <!-- Content -->
+                    <Grid Grid.Row="1" Background="White">
+                        <TextBlock Text="{Binding StatusText}" 
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   FontSize="12"
+                                   Foreground="Black"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+    
+    <Grid Background="#F0F0F0">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="20">
+                <!-- 디버깅용 -->
+                <TextBlock Text="{Binding TakeoutTables.Count, StringFormat='포장 테이블 수: {0}'}" 
+                           FontSize="14" Foreground="Red" Margin="0,5"/>
+                
+                <!-- 포장 섹션 -->
+                <TextBlock Text="포장" FontSize="18" FontWeight="Bold" Margin="0,10,0,10"/>
+                <ItemsControl ItemsSource="{Binding TakeoutTables}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <dxlc:Tile Style="{StaticResource SystemTableTileStyle}"
+                                       ContentTemplate="{StaticResource SystemTableContentTemplate}"
+                                       Content="{Binding}"
+                                       Tag="{Binding}">
+                                <dxmvvm:Interaction.Behaviors>
+                                    <dxmvvm:EventToCommand EventName="Click" 
+                                                           Command="{Binding DataContext.TableClickCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                           PassEventArgsToCommand="True"/>
+                                </dxmvvm:Interaction.Behaviors>
+                            </dxlc:Tile>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                
+                <!-- 구분선 -->
+                <Border Height="1" Background="#E0E0E0" Margin="0,20"/>
+                
+                <!-- 대기 섹션 -->
+                <TextBlock Text="대기" FontSize="18" FontWeight="Bold" Margin="0,10,0,10"/>
+                <ItemsControl ItemsSource="{Binding WaitingTables}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <dxlc:Tile Style="{StaticResource SystemTableTileStyle}"
+                                       ContentTemplate="{StaticResource SystemTableContentTemplate}"
+                                       Content="{Binding}"
+                                       Tag="{Binding}">
+                                <dxmvvm:Interaction.Behaviors>
+                                    <dxmvvm:EventToCommand EventName="Click" 
+                                                           Command="{Binding DataContext.TableClickCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                           PassEventArgsToCommand="True"/>
+                                </dxmvvm:Interaction.Behaviors>
+                            </dxlc:Tile>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                
+                <!-- 구분선 -->
+                <Border Height="1" Background="#E0E0E0" Margin="0,20"/>
+                
+                <!-- 배달 섹션 -->
+                <TextBlock Text="배달" FontSize="18" FontWeight="Bold" Margin="0,10,0,10"/>
+                <ItemsControl ItemsSource="{Binding DeliveryTables}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <dxlc:Tile Style="{StaticResource SystemTableTileStyle}"
+                                       ContentTemplate="{StaticResource SystemTableContentTemplate}"
+                                       Content="{Binding}"
+                                       Tag="{Binding}">
+                                <dxmvvm:Interaction.Behaviors>
+                                    <dxmvvm:EventToCommand EventName="Click" 
+                                                           Command="{Binding DataContext.TableClickCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                           PassEventArgsToCommand="True"/>
+                                </dxmvvm:Interaction.Behaviors>
+                            </dxlc:Tile>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

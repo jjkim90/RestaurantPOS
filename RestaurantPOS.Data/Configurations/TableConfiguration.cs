@@ -19,13 +19,17 @@ namespace RestaurantPOS.Data.Configurations
                 .IsRequired()
                 .HasMaxLength(50);
 
+            builder.Property(t => t.TableNumber)
+                .IsRequired();
+
             builder.Property(t => t.Shape)
                 .HasMaxLength(20);
 
-            builder.Property(t => t.Status)
+            builder.Property(t => t.TableStatus)
                 .IsRequired()
+                .HasConversion<string>()
                 .HasMaxLength(20)
-                .HasDefaultValue("Available");
+                .HasDefaultValue(Core.Enums.TableStatus.Available);
 
             builder.Property(t => t.IsEditable)
                 .HasDefaultValue(true);
@@ -41,12 +45,12 @@ namespace RestaurantPOS.Data.Configurations
 
             // Indexes
             builder.HasIndex(t => t.SpaceId);
-            builder.HasIndex(t => t.Status);
-            builder.HasIndex(t => new { t.SpaceId, t.Status });
+            builder.HasIndex(t => t.TableStatus);
+            builder.HasIndex(t => new { t.SpaceId, t.TableStatus });
 
             // Check constraints
             builder.HasCheckConstraint("CK_Tables_Status", 
-                "[Status] IN ('Available', 'Occupied', 'PaymentPending')");
+                "[TableStatus] IN ('Available', 'Occupied', 'PaymentPending', 'Reserved', 'Cleaning')");
             builder.HasCheckConstraint("CK_Tables_Shape", 
                 "[Shape] IN ('Circle', 'Rectangle') OR [Shape] IS NULL");
         }
