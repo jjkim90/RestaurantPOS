@@ -3,6 +3,7 @@ using Prism.Commands;
 using Prism.Mvvm;
 using RestaurantPOS.Core.Interfaces;
 using RestaurantPOS.WPF.Modules.TableModule.Services;
+using RestaurantPOS.WPF.Modules.TableModule.Views;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -15,6 +16,7 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
     {
         private readonly ITableUIService _tableUIService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ITableService _tableService;
         private readonly DispatcherTimer _timer;
 
         private string _currentTime = string.Empty;
@@ -73,10 +75,11 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
             set { SetProperty(ref _isSystemTablesMode, value); }
         }
 
-        public TableManagementViewModel(ITableUIService tableUIService, IUnitOfWork unitOfWork)
+        public TableManagementViewModel(ITableUIService tableUIService, IUnitOfWork unitOfWork, ITableService tableService)
         {
             _tableUIService = tableUIService;
             _unitOfWork = unitOfWork;
+            _tableService = tableService;
 
             // Initialize collections
             Spaces = new ObservableCollection<SpaceViewModel>();
@@ -189,19 +192,106 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
             }
         }
         
-        private void OnAddSpace()
+        private async void OnAddSpace()
         {
-            // TODO: Show dialog to add new space
+            var dialog = new SpaceEditDialog();
+            dialog.ViewModel.Initialize();
+            
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var createDto = new Core.DTOs.CreateSpaceDto
+                    {
+                        SpaceName = dialog.ViewModel.SpaceName,
+                        IsActive = dialog.ViewModel.IsActive
+                    };
+                    
+                    var newSpace = await _tableService.CreateSpaceAsync(createDto);
+                    
+                    // 전체 데이터 다시 로드
+                    await LoadSpacesAndTablesAsync();
+                    
+                    System.Windows.MessageBox.Show("홀이 추가되었습니다.", "성공", 
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"홀 추가 중 오류가 발생했습니다: {ex.Message}", 
+                        "오류", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
         }
         
-        private void OnEditSpace(SpaceViewModel space)
+        private async void OnEditSpace(SpaceViewModel space)
         {
-            // TODO: Show dialog to edit space
+            if (space == null) return;
+            
+            var dialog = new SpaceEditDialog();
+            dialog.ViewModel.Initialize(space);
+            
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var updateDto = new Core.DTOs.UpdateSpaceDto
+                    {
+                        SpaceName = dialog.ViewModel.SpaceName,
+                        IsActive = dialog.ViewModel.IsActive
+                    };
+                    
+                    await _tableService.UpdateSpaceAsync(space.SpaceId, updateDto);
+                    
+                    // 전체 데이터 다시 로드
+                    await LoadSpacesAndTablesAsync();
+                    
+                    System.Windows.MessageBox.Show("홀이 수정되었습니다.", "성공", 
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"홀 수정 중 오류가 발생했습니다: {ex.Message}", 
+                        "오류", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
         }
         
-        private void OnDeleteSpace(SpaceViewModel space)
+        private async void OnDeleteSpace(SpaceViewModel space)
         {
-            // TODO: Confirm and delete space
+            if (space == null) return;
+            
+            var result = System.Windows.MessageBox.Show(
+                $"'{space.SpaceName}' 홀을 삭제하시겠습니까?\n\n주의: 홀에 속한 모든 테이블도 삭제되며, 진행 중인 주문이 있는 경우 삭제할 수 없습니다.", 
+                "홀 삭제 확인", 
+                System.Windows.MessageBoxButton.YesNo, 
+                System.Windows.MessageBoxImage.Warning);
+            
+            if (result == System.Windows.MessageBoxResult.Yes)
+            {
+                try
+                {
+                    var canDelete = await _tableService.CanDeleteSpaceAsync(space.SpaceId);
+                    if (!canDelete)
+                    {
+                        System.Windows.MessageBox.Show("진행 중인 주문이 있어 삭제할 수 없습니다.", 
+                            "삭제 불가", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                        return;
+                    }
+                    
+                    await _tableService.DeleteSpaceAsync(space.SpaceId);
+                    
+                    // 전체 데이터 다시 로드
+                    await LoadSpacesAndTablesAsync();
+                    
+                    System.Windows.MessageBox.Show("홀이 삭제되었습니다.", "성공", 
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"홀 삭제 중 오류가 발생했습니다: {ex.Message}", 
+                        "오류", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
         }
         
         private void OnSelectSpace(SpaceViewModel space)
