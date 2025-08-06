@@ -39,3 +39,6 @@ _ReSharper*/
 appsettings.json
 appsettings.*.json
 !appsettings.template.json
+
+# UI Reference folder
+UI/
