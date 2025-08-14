@@ -10,65 +10,50 @@ namespace RestaurantPOS.WPF.Modules.TableModule.Services
     public class TableUIService : ITableUIService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IRegionManager _regionManager;
 
-        public TableUIService(IUnitOfWork unitOfWork)
+        public TableUIService(IUnitOfWork unitOfWork, IRegionManager regionManager)
         {
             _unitOfWork = unitOfWork;
+            _regionManager = regionManager;
         }
 
         public async Task ShowTableOptionsAsync(TableViewModel table)
         {
-            string message = "작업을 선택하세요:\n\n";
-            
-            if (table.StatusText == "빈 테이블")
+            try
             {
-                message += "1. 새 주문 시작\n2. 테이블 예약";
-                var result = DXMessageBox.Show(
-                    message,
-                    $"테이블 {table.TableNumber}",
-                    MessageBoxButton.YesNoCancel,
-                    MessageBoxImage.Question);
+                System.Diagnostics.Debug.WriteLine($"ShowTableOptionsAsync called for table: {table.DisplayName}, Status: {table.StatusText}");
                 
-                if (result == MessageBoxResult.Yes)
+                // 빈 테이블 클릭 시 주문 화면으로 이동 (상태 변경하지 않음)
+                if (table.StatusText == "빈 테이블")
                 {
-                    await ChangeTableStatusAsync(table.TableId, Core.Enums.TableStatus.Occupied);
+                    // 주문이 확정될 때만 상태를 변경하도록 수정
                     await MoveToOrderScreenAsync(table.TableId);
                 }
-                else if (result == MessageBoxResult.No)
-                {
-                    await ChangeTableStatusAsync(table.TableId, Core.Enums.TableStatus.Reserved);
-                }
-            }
-            else if (table.StatusText == "사용중")
-            {
-                message += "1. 주문 보기\n2. 테이블 비우기";
-                var result = DXMessageBox.Show(
-                    message,
-                    $"테이블 {table.TableNumber}",
-                    MessageBoxButton.YesNoCancel,
-                    MessageBoxImage.Question);
-                
-                if (result == MessageBoxResult.Yes)
+                // 사용중 테이블 클릭 시 바로 주문 화면으로 이동
+                else if (table.StatusText == "사용중")
                 {
                     await MoveToOrderScreenAsync(table.TableId);
                 }
-                else if (result == MessageBoxResult.No)
+                // 예약됨 또는 정리중 상태의 테이블은 상태 변경 확인
+                else
                 {
-                    await ChangeTableStatusAsync(table.TableId, Core.Enums.TableStatus.Available);
+                    var result = DXMessageBox.Show(
+                        $"테이블을 사용 가능 상태로 변경하시겠습니까?\n현재 상태: {table.StatusText}",
+                        $"테이블 {table.TableNumber}",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+                    
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        await ChangeTableStatusAsync(table.TableId, Core.Enums.TableStatus.Available);
+                    }
                 }
             }
-            else
+            catch (Exception ex)
             {
-                var result = DXMessageBox.Show(
-                    "테이블 상태를 변경하시겠습니까?",
-                    $"테이블 {table.TableNumber}",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
-                
-                if (result == MessageBoxResult.Yes)
-                {
-                    await ChangeTableStatusAsync(table.TableId, Core.Enums.TableStatus.Available);
-                }
+                System.Diagnostics.Debug.WriteLine($"Error in ShowTableOptionsAsync: {ex}");
+                System.Windows.MessageBox.Show($"테이블 처리 중 오류가 발생했습니다: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -95,11 +80,31 @@ namespace RestaurantPOS.WPF.Modules.TableModule.Services
 
         public async Task MoveToOrderScreenAsync(int tableId)
         {
-            // TODO: Navigate to order screen with table ID
-            // This will be implemented when order module is created
-            await Task.CompletedTask;
-            
-            System.Windows.MessageBox.Show($"주문 화면으로 이동 (테이블 {tableId})", "알림", MessageBoxButton.OK, MessageBoxImage.Information);
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"MoveToOrderScreenAsync called with tableId: {tableId}");
+                
+                var parameters = new NavigationParameters
+                {
+                    { "tableId", tableId }
+                };
+                
+                _regionManager.RequestNavigate("MainRegion", new Uri("OrderManagementView", UriKind.Relative), navigationResult =>
+                {
+                    System.Diagnostics.Debug.WriteLine($"Navigation result: Success={navigationResult.Result}, Error={navigationResult.Error?.Message}");
+                    if (!navigationResult.Result.Value && navigationResult.Error != null)
+                    {
+                        System.Windows.MessageBox.Show($"네비게이션 실패: {navigationResult.Error.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }, parameters);
+                
+                await Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in MoveToOrderScreenAsync: {ex}");
+                System.Windows.MessageBox.Show($"주문 화면 이동 중 오류가 발생했습니다: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 }

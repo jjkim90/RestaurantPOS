@@ -47,6 +47,7 @@
         <!-- Main Content Region -->
         <ContentControl Grid.Row="1" 
                         x:Name="ContentRegion"
+                        prism:RegionManager.RegionName="MainRegion"
                         Margin="5"/>
         
         <!-- Status Bar -->

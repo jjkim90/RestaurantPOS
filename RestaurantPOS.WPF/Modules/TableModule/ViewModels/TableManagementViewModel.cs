@@ -7,17 +7,19 @@ using RestaurantPOS.WPF.Modules.TableModule.Views;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 
 namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
 {
-    public class TableManagementViewModel : BindableBase
+    public class TableManagementViewModel : BindableBase, INavigationAware
     {
         private readonly ITableUIService _tableUIService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ITableService _tableService;
         private readonly DispatcherTimer _timer;
+        private readonly SemaphoreSlim _loadDataSemaphore = new SemaphoreSlim(1, 1);
 
         private string _currentTime = string.Empty;
         public string CurrentTime
@@ -52,7 +54,7 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
         public ObservableCollection<WaitingViewModel> WaitingList { get; }
 
         // Commands
-        public DelegateCommand<TileClickEventArgs> TableClickCommand { get; }
+        public DelegateCommand<object> TableClickCommand { get; }
         public DelegateCommand AddSpaceCommand { get; }
         public DelegateCommand<SpaceViewModel> EditSpaceCommand { get; }
         public DelegateCommand<SpaceViewModel> DeleteSpaceCommand { get; }
@@ -91,7 +93,7 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
             WaitingList = new ObservableCollection<WaitingViewModel>();
 
             // Initialize commands
-            TableClickCommand = new DelegateCommand<TileClickEventArgs>(OnTableClick);
+            TableClickCommand = new DelegateCommand<object>(OnTableClick);
             AddSpaceCommand = new DelegateCommand(OnAddSpace);
             EditSpaceCommand = new DelegateCommand<SpaceViewModel>(OnEditSpace);
             DeleteSpaceCommand = new DelegateCommand<SpaceViewModel>(OnDeleteSpace);
@@ -112,6 +114,9 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
 
         private async Task LoadSpacesAndTablesAsync()
         {
+            // SemaphoreSlim을 사용하여 동시 접근 방지
+            await _loadDataSemaphore.WaitAsync();
+            
             try
             {
                 var spaces = await _unitOfWork.SpaceRepository.GetAllAsync();
@@ -181,14 +186,25 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
                 // Log error
                 System.Windows.MessageBox.Show($"데이터 로드 중 오류 발생: {ex.Message}", "오류", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
+            finally
+            {
+                // 항상 세마포어를 해제하여 다음 작업이 진행될 수 있도록 함
+                _loadDataSemaphore.Release();
+            }
         }
 
-        private async void OnTableClick(TileClickEventArgs e)
+        private async void OnTableClick(object parameter)
         {
-            if (e?.Tile?.Tag is TableViewModel tableViewModel)
+            System.Diagnostics.Debug.WriteLine($"OnTableClick called with parameter type: {parameter?.GetType().Name ?? "null"}");
+            
+            if (parameter is TableViewModel tableViewModel)
             {
-                // TODO: Navigate to order screen or show table options
+                System.Diagnostics.Debug.WriteLine($"Table clicked: {tableViewModel.DisplayName}, TableId: {tableViewModel.TableId}");
                 await _tableUIService.ShowTableOptionsAsync(tableViewModel);
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"Parameter is not TableViewModel. Actual type: {parameter?.GetType().FullName ?? "null"}");
             }
         }
         
@@ -315,6 +331,24 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
             
         }
 
+        #region INavigationAware Implementation
+        public void OnNavigatedTo(NavigationContext navigationContext)
+        {
+            System.Diagnostics.Debug.WriteLine("TableManagementViewModel - OnNavigatedTo");
+            // 테이블 화면으로 돌아왔을 때 데이터 새로고침
+            Task.Run(async () => await LoadSpacesAndTablesAsync());
+        }
+
+        public void OnNavigatedFrom(NavigationContext navigationContext)
+        {
+            System.Diagnostics.Debug.WriteLine("TableManagementViewModel - OnNavigatedFrom");
+        }
+
+        public bool IsNavigationTarget(NavigationContext navigationContext)
+        {
+            return true; // 항상 동일한 인스턴스 사용
+        }
+        #endregion
     }
     
     // Space ViewModel

@@ -201,7 +201,8 @@
                                         <dxmvvm:Interaction.Behaviors>
                                             <dxmvvm:EventToCommand EventName="Click" 
                                                                    Command="{Binding DataContext.TableClickCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                                   PassEventArgsToCommand="True"/>
+                                                                   CommandParameter="{Binding}"
+                                                                   PassEventArgsToCommand="False"/>
                                         </dxmvvm:Interaction.Behaviors>
                                     </dxlc:Tile>
                                 </DataTemplate>
@@ -232,7 +233,8 @@
                                             <dxmvvm:Interaction.Behaviors>
                                                 <dxmvvm:EventToCommand EventName="Click" 
                                                                        Command="{Binding DataContext.TableClickCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                                       PassEventArgsToCommand="True"/>
+                                                                       CommandParameter="{Binding}"
+                                                                       PassEventArgsToCommand="False"/>
                                             </dxmvvm:Interaction.Behaviors>
                                         </dxlc:Tile>
                                     </DataTemplate>
@@ -259,7 +261,8 @@
                                             <dxmvvm:Interaction.Behaviors>
                                                 <dxmvvm:EventToCommand EventName="Click" 
                                                                        Command="{Binding DataContext.TableClickCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                                       PassEventArgsToCommand="True"/>
+                                                                       CommandParameter="{Binding}"
+                                                                       PassEventArgsToCommand="False"/>
                                             </dxmvvm:Interaction.Behaviors>
                                         </dxlc:Tile>
                                     </DataTemplate>
@@ -286,7 +289,8 @@
                                             <dxmvvm:Interaction.Behaviors>
                                                 <dxmvvm:EventToCommand EventName="Click" 
                                                                        Command="{Binding DataContext.TableClickCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                                       PassEventArgsToCommand="True"/>
+                                                                       CommandParameter="{Binding}"
+                                                                       PassEventArgsToCommand="False"/>
                                             </dxmvvm:Interaction.Behaviors>
                                         </dxlc:Tile>
                                     </DataTemplate>

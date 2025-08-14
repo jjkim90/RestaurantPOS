@@ -2,6 +2,7 @@
 using DevExpress.Xpf.Core;
 using DryIoc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Prism.DryIoc;
 using Prism.Ioc;
@@ -13,6 +14,7 @@ using RestaurantPOS.Data.Seeders;
 using RestaurantPOS.Services;
 using RestaurantPOS.Services.Mappings;
 using RestaurantPOS.WPF.Modules.TableModule;
+using RestaurantPOS.WPF.Modules.OrderModule;
 using RestaurantPOS.WPF.Views;
 using Serilog;
 using System;
@@ -37,9 +39,9 @@ namespace RestaurantPOS.WPF
         protected override void ConfigureModuleCatalog(IModuleCatalog moduleCatalog)
         {
             moduleCatalog.AddModule<TableModule>();
+            moduleCatalog.AddModule<OrderModule>();
             // Future modules can be added here
             // moduleCatalog.AddModule<MenuModule>();
-            // moduleCatalog.AddModule<OrderModule>();
         }
 
         protected override void RegisterTypes(IContainerRegistry containerRegistry)
@@ -71,8 +73,12 @@ namespace RestaurantPOS.WPF
             var mapper = config.CreateMapper();
             containerRegistry.RegisterInstance<IMapper>(mapper);
 
+            // Memory Cache 등록
+            containerRegistry.RegisterSingleton<IMemoryCache>(() => new MemoryCache(new MemoryCacheOptions()));
+
             // Services 등록
             containerRegistry.RegisterScoped<ITableService, TableService>();
+            containerRegistry.RegisterSingleton<IMenuCacheService, MenuCacheService>();
             // containerRegistry.RegisterScoped<IMenuService, MenuService>();
             // containerRegistry.RegisterScoped<IOrderService, OrderService>();
 
@@ -99,13 +105,39 @@ namespace RestaurantPOS.WPF
                     await seeder.SeedAsync();
                 }
 
-                // 초기 화면으로 TableManagementView 표시
-                var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
-                if (mainWindow != null)
+                // Warm-up: EF Core 및 메뉴 데이터 캐시 사전 로딩
+                using (var warmupScope = Container.CreateScope())
                 {
-                    var tableView = Container.Resolve<RestaurantPOS.WPF.Modules.TableModule.Views.TableManagementView>();
-                    mainWindow.ContentRegion.Content = tableView;
+                    var warmupContext = warmupScope.Resolve<RestaurantContext>();
+                    // 간단한 쿼리로 EF Core 초기화
+                    _ = await warmupContext.Categories.AnyAsync();
+                    
+                    // 메뉴 캐시 서비스로 카테고리와 첫 번째 카테고리의 메뉴 아이템 미리 로드
+                    var menuCacheService = warmupScope.Resolve<IMenuCacheService>();
+                    var categories = await menuCacheService.GetCategoriesAsync();
+                    if (categories.Any())
+                    {
+                        // 첫 번째 카테고리의 메뉴 아이템도 미리 캐싱
+                        await menuCacheService.GetMenuItemsByCategoryAsync(categories.First().CategoryId);
+                    }
                 }
+                
+                // DevExpress Grid 컨트롤 사전 로딩 (백그라운드에서)
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        // DevExpress Grid 관련 DLL 강제 로드
+                        var gridType = typeof(DevExpress.Xpf.Grid.GridControl);
+                        var imagesType = typeof(DevExpress.Images.ImageResourceCache);
+                        System.Diagnostics.Debug.WriteLine($"DevExpress Grid preloaded: {gridType.Name}");
+                    }
+                    catch { }
+                });
+
+                // 초기 화면으로 TableManagementView 표시 (Prism Navigation 사용)
+                var regionManager = Container.Resolve<Prism.Regions.IRegionManager>();
+                regionManager.RequestNavigate("MainRegion", "TableManagementView");
 
                 Log.Information("애플리케이션이 성공적으로 초기화되었습니다.");
             }
