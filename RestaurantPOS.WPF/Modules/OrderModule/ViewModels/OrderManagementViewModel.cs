@@ -41,7 +41,7 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
             
             // Commands
             BackToTableCommand = new DelegateCommand(OnBackToTable);
-            CategoryClickCommand = new DelegateCommand<CategoryViewModel>(OnCategoryClick);
+            CategoryClickCommand = new DelegateCommand<CategoryViewModel>(async (category) => await OnCategoryClickAsync(category));
             MenuItemClickCommand = new DelegateCommand<MenuItemViewModel>(OnMenuItemClick);
             RemoveOrderItemCommand = new DelegateCommand<OrderItemViewModel>(OnRemoveOrderItem);
             ConfirmOrderCommand = new DelegateCommand(OnConfirmOrder, CanConfirmOrder);
@@ -101,11 +101,22 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
             _regionManager.RequestNavigate("MainRegion", "TableManagementView");
         }
 
-        private async void OnCategoryClick(CategoryViewModel category)
+        private async Task OnCategoryClickAsync(CategoryViewModel category)
         {
+            System.Diagnostics.Debug.WriteLine($"OnCategoryClickAsync called with category: {category?.CategoryName}");
+            
             if (category == null) return;
             
+            // 이전 선택 해제
+            if (SelectedCategory != null)
+            {
+                SelectedCategory.IsSelected = false;
+            }
+            
             SelectedCategory = category;
+            category.IsSelected = true;
+            System.Diagnostics.Debug.WriteLine($"SelectedCategory set to: {SelectedCategory.CategoryName}");
+            
             await LoadMenuItemsAsync(category.CategoryId);
         }
 
@@ -205,7 +216,7 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
                 // 캐시 서비스 사용 - 이미 동기화 처리됨
                 var categories = await _menuCacheService.GetCategoriesAsync();
                 
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
                 {
                     Categories.Clear();
                     foreach (var category in categories)
@@ -220,7 +231,9 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
                     // Select first category
                     if (Categories.Any())
                     {
-                        OnCategoryClick(Categories.First());
+                        var firstCategory = Categories.First();
+                        // OnCategoryClick 내부에서 IsSelected를 설정하므로 여기서는 제거
+                        await OnCategoryClickAsync(firstCategory);
                     }
                 });
             }
@@ -232,12 +245,15 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
 
         private async Task LoadMenuItemsAsync(int categoryId)
         {
+            System.Diagnostics.Debug.WriteLine($"LoadMenuItemsAsync called for categoryId: {categoryId}");
+            
             try
             {
                 // 캐시 서비스 사용 - 이미 동기화 처리됨
                 var menuItems = await _menuCacheService.GetMenuItemsByCategoryAsync(categoryId);
+                System.Diagnostics.Debug.WriteLine($"Retrieved {menuItems.Count()} menu items from cache");
                 
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
                 {
                     MenuItems.Clear();
                     foreach (var item in menuItems)
@@ -250,11 +266,16 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
                             Description = item.Description
                         });
                     }
+                    System.Diagnostics.Debug.WriteLine($"Added {MenuItems.Count} items to MenuItems collection");
+                    
+                    // 명시적으로 PropertyChanged 이벤트 발생
+                    RaisePropertyChanged(nameof(MenuItems));
                 });
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading menu items: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
             }
         }
 
@@ -317,8 +338,16 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
     #region ViewModels
     public class CategoryViewModel : BindableBase
     {
+        private bool _isSelected;
+        
         public int CategoryId { get; set; }
         public string CategoryName { get; set; }
+        
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => SetProperty(ref _isSelected, value);
+        }
     }
 
     public class MenuItemViewModel : BindableBase

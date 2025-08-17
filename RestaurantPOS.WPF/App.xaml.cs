@@ -4,6 +4,7 @@ using DryIoc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Prism.DryIoc;
 using Prism.Ioc;
 using Prism.Modularity;
@@ -13,6 +14,7 @@ using RestaurantPOS.Data.Repositories;
 using RestaurantPOS.Data.Seeders;
 using RestaurantPOS.Services;
 using RestaurantPOS.Services.Mappings;
+using RestaurantPOS.WPF.Infrastructure;
 using RestaurantPOS.WPF.Modules.TableModule;
 using RestaurantPOS.WPF.Modules.OrderModule;
 using RestaurantPOS.WPF.Views;
@@ -75,6 +77,9 @@ namespace RestaurantPOS.WPF
 
             // Memory Cache 등록
             containerRegistry.RegisterSingleton<IMemoryCache>(() => new MemoryCache(new MemoryCacheOptions()));
+
+            // ServiceScopeFactory 등록 (DryIoc 용)
+            containerRegistry.RegisterSingleton<IServiceScopeFactory>(() => new DryIocServiceScopeFactory(Container.GetContainer()));
 
             // Services 등록
             containerRegistry.RegisterScoped<ITableService, TableService>();

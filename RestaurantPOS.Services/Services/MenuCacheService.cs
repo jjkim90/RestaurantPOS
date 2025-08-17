@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using RestaurantPOS.Core.Entities;
 using RestaurantPOS.Core.Interfaces;
 using System;
@@ -10,16 +11,16 @@ namespace RestaurantPOS.Services
 {
     public class MenuCacheService : IMenuCacheService
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly IMemoryCache _cache;
         private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(30);
         
         private const string CATEGORIES_CACHE_KEY = "categories_all";
         private const string MENU_ITEMS_BY_CATEGORY_PREFIX = "menu_items_category_";
 
-        public MenuCacheService(IUnitOfWork unitOfWork, IMemoryCache cache)
+        public MenuCacheService(IServiceScopeFactory scopeFactory, IMemoryCache cache)
         {
-            _unitOfWork = unitOfWork;
+            _scopeFactory = scopeFactory;
             _cache = cache;
         }
 
@@ -29,21 +30,33 @@ namespace RestaurantPOS.Services
             {
                 entry.SetAbsoluteExpiration(_cacheExpiration);
                 
-                var categories = await _unitOfWork.CategoryRepository.GetAllAsync();
-                return categories.Where(c => c.IsActive).OrderBy(c => c.DisplayOrder).ToList();
+                using (var scope = _scopeFactory.CreateScope())
+                {
+                    var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                    var categories = await unitOfWork.CategoryRepository.GetAllAsync();
+                    return categories.Where(c => c.IsActive).OrderBy(c => c.DisplayOrder).ToList();
+                }
             });
         }
 
         public async Task<IEnumerable<MenuItem>> GetMenuItemsByCategoryAsync(int categoryId)
         {
             var cacheKey = $"{MENU_ITEMS_BY_CATEGORY_PREFIX}{categoryId}";
+            System.Diagnostics.Debug.WriteLine($"MenuCacheService.GetMenuItemsByCategoryAsync called for categoryId: {categoryId}");
             
             return await _cache.GetOrCreateAsync(cacheKey, async entry =>
             {
+                System.Diagnostics.Debug.WriteLine($"Cache miss for key: {cacheKey}, loading from database");
                 entry.SetAbsoluteExpiration(_cacheExpiration);
                 
-                var menuItems = await _unitOfWork.MenuItemRepository.FindAsync(m => m.CategoryId == categoryId);
-                return menuItems.Where(m => m.IsAvailable).ToList();
+                using (var scope = _scopeFactory.CreateScope())
+                {
+                    var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                    var menuItems = await unitOfWork.MenuItemRepository.FindAsync(m => m.CategoryId == categoryId);
+                    var availableItems = menuItems.Where(m => m.IsAvailable).ToList();
+                    System.Diagnostics.Debug.WriteLine($"Found {availableItems.Count} available menu items for categoryId: {categoryId}");
+                    return availableItems;
+                }
             });
         }
 
