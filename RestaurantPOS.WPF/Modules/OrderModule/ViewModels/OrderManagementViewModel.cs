@@ -4,6 +4,7 @@ using Prism.Regions;
 using RestaurantPOS.Core.DTOs;
 using RestaurantPOS.Core.Entities;
 using RestaurantPOS.Core.Interfaces;
+using RestaurantPOS.WPF.Modules.OrderModule.Views;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -19,9 +20,11 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         private readonly IUnitOfWork _unitOfWork;
         private readonly IRegionManager _regionManager;
         private readonly RestaurantPOS.Core.Interfaces.IMenuCacheService _menuCacheService;
+        private readonly IOrderService _orderService;
         private readonly SemaphoreSlim _dbSemaphore = new SemaphoreSlim(1, 1);
         
         private int _currentTableId;
+        private int _currentOrderId;
         private string _tableDisplayName;
         private ObservableCollection<CategoryViewModel> _categories;
         private ObservableCollection<MenuItemViewModel> _menuItems;
@@ -29,11 +32,12 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         private CategoryViewModel _selectedCategory;
         private decimal _totalAmount;
 
-        public OrderManagementViewModel(IUnitOfWork unitOfWork, IRegionManager regionManager, RestaurantPOS.Core.Interfaces.IMenuCacheService menuCacheService)
+        public OrderManagementViewModel(IUnitOfWork unitOfWork, IRegionManager regionManager, RestaurantPOS.Core.Interfaces.IMenuCacheService menuCacheService, IOrderService orderService)
         {
             _unitOfWork = unitOfWork;
             _regionManager = regionManager;
             _menuCacheService = menuCacheService;
+            _orderService = orderService;
             
             Categories = new ObservableCollection<CategoryViewModel>();
             MenuItems = new ObservableCollection<MenuItemViewModel>();
@@ -158,33 +162,54 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
 
         private async void OnConfirmOrder()
         {
-            await _dbSemaphore.WaitAsync();
-            
             try
             {
-                // 테이블 상태를 사용중으로 변경
-                var table = await _unitOfWork.TableRepository.GetByIdAsync(_currentTableId);
-                if (table != null && table.TableStatus == Core.Enums.TableStatus.Available)
+                // OrderItemDTO 배열 생성
+                var orderItems = OrderItems.Select(oi => new OrderItemDTO
                 {
-                    table.TableStatus = Core.Enums.TableStatus.Occupied;
-                    table.UpdatedAt = DateTime.Now;
-                    _unitOfWork.TableRepository.Update(table);
-                    await _unitOfWork.SaveChangesAsync();
+                    MenuItemId = oi.MenuItemId,
+                    MenuItemName = oi.MenuItemName,
+                    Quantity = oi.Quantity,
+                    UnitPrice = oi.UnitPrice,
+                    SubTotal = oi.SubTotal
+                }).ToArray();
+
+                // 주문 생성
+                var createdOrder = await _orderService.CreateOrderAsync(_currentTableId, orderItems);
+                _currentOrderId = createdOrder.OrderId;
+                
+                // 테이블 상태를 사용중으로 변경
+                await _dbSemaphore.WaitAsync();
+                try
+                {
+                    var table = await _unitOfWork.TableRepository.GetByIdAsync(_currentTableId);
+                    if (table != null && table.TableStatus == Core.Enums.TableStatus.Available)
+                    {
+                        table.TableStatus = Core.Enums.TableStatus.Occupied;
+                        table.UpdatedAt = DateTime.Now;
+                        table.LastOrderTime = DateTime.Now;
+                        _unitOfWork.TableRepository.Update(table);
+                        await _unitOfWork.SaveChangesAsync();
+                    }
+                }
+                finally
+                {
+                    _dbSemaphore.Release();
                 }
                 
-                // TODO: Create order and send to kitchen
-                await Task.CompletedTask;
-                System.Windows.MessageBox.Show("주문이 주방으로 전송되었습니다.", "주문 확정", 
+                // 주문 목록 초기화
+                OrderItems.Clear();
+                UpdateTotalAmount();
+                
+                System.Windows.MessageBox.Show($"주문번호 {createdOrder.OrderNumber}가 주방으로 전송되었습니다.", "주문 확정", 
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                    
+                // TODO: 프린터로 주문 전표 출력
             }
             catch (Exception ex)
             {
                 System.Windows.MessageBox.Show($"주문 처리 중 오류가 발생했습니다: {ex.Message}", "오류", 
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-            }
-            finally
-            {
-                _dbSemaphore.Release();
             }
         }
 
@@ -192,10 +217,71 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         {
             try
             {
-                // TODO: Process payment
-                await Task.CompletedTask;
-                System.Windows.MessageBox.Show("결제 기능은 준비 중입니다.", "결제", 
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                // 현재 주문이 없으면 주문을 먼저 생성
+                if (_currentOrderId == 0 && OrderItems.Any())
+                {
+                    OnConfirmOrder();
+                    return;
+                }
+
+                if (_currentOrderId == 0)
+                {
+                    System.Windows.MessageBox.Show("결제할 주문이 없습니다.", "알림", 
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
+                // 현재 주문 정보 조회
+                var currentOrder = await _orderService.GetActiveOrderByTableIdAsync(_currentTableId);
+                if (currentOrder == null)
+                {
+                    System.Windows.MessageBox.Show("주문 정보를 찾을 수 없습니다.", "오류", 
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    return;
+                }
+
+                // 결제 다이얼로그 표시
+                var paymentViewModel = new PaymentViewModel { Order = currentOrder };
+                var paymentDialog = new PaymentDialog { DataContext = paymentViewModel };
+                
+                bool paymentProcessed = false;
+                string paymentMethod = "";
+
+                paymentViewModel.PaymentCompleted += (s, method) =>
+                {
+                    paymentProcessed = true;
+                    paymentMethod = method;
+                    paymentDialog.Close();
+                };
+
+                paymentViewModel.PaymentCancelled += (s, e) =>
+                {
+                    paymentDialog.Close();
+                };
+
+                paymentDialog.ShowDialog();
+
+                if (paymentProcessed)
+                {
+                    // 결제 처리
+                    var completedOrder = await _orderService.ProcessPaymentAsync(_currentOrderId, paymentMethod);
+                    
+                    // UI 초기화
+                    OrderItems.Clear();
+                    UpdateTotalAmount();
+                    _currentOrderId = 0;
+                    
+                    System.Windows.MessageBox.Show(
+                        $"주문번호 {completedOrder.OrderNumber}의 결제가 완료되었습니다.\n결제방법: {paymentMethod}", 
+                        "결제 완료", 
+                        System.Windows.MessageBoxButton.OK, 
+                        System.Windows.MessageBoxImage.Information);
+                        
+                    // TODO: 영수증 출력
+                    
+                    // 테이블 화면으로 돌아가기
+                    _regionManager.RequestNavigate("MainRegion", "TableManagementView");
+                }
             }
             catch (Exception ex)
             {
@@ -281,8 +367,37 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
 
         private async Task LoadExistingOrderAsync()
         {
-            // TODO: Load existing order if table has an active order
-            await Task.CompletedTask;
+            try
+            {
+                var existingOrder = await _orderService.GetActiveOrderByTableIdAsync(_currentTableId);
+                if (existingOrder != null)
+                {
+                    _currentOrderId = existingOrder.OrderId;
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        OrderItems.Clear();
+                        foreach (var detail in existingOrder.OrderDetails)
+                        {
+                            var orderItem = new OrderItemViewModel
+                            {
+                                MenuItemId = detail.MenuItemId,
+                                MenuItemName = detail.MenuItemName,
+                                UnitPrice = detail.UnitPrice,
+                                Quantity = detail.Quantity
+                            };
+                            orderItem.UpdateSubTotal();
+                            OrderItems.Add(orderItem);
+                        }
+                        UpdateTotalAmount();
+                        ((DelegateCommand)ConfirmOrderCommand).RaiseCanExecuteChanged();
+                        ((DelegateCommand)PaymentCommand).RaiseCanExecuteChanged();
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading existing order: {ex.Message}");
+            }
         }
 
         private void UpdateTotalAmount()

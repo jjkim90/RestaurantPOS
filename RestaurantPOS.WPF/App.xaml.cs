@@ -84,8 +84,8 @@ namespace RestaurantPOS.WPF
             // Services 등록
             containerRegistry.RegisterScoped<ITableService, TableService>();
             containerRegistry.RegisterSingleton<IMenuCacheService, MenuCacheService>();
+            containerRegistry.RegisterScoped<IOrderService, OrderService>();
             // containerRegistry.RegisterScoped<IMenuService, MenuService>();
-            // containerRegistry.RegisterScoped<IOrderService, OrderService>();
 
             // Views 등록
             containerRegistry.RegisterForNavigation<MainWindow>(nameof(MainWindow));
