@@ -9,6 +9,12 @@
              xmlns:prism="http://prismlibrary.com/"
              xmlns:dxb="http://schemas.devexpress.com/winfx/2008/xaml/bars">
     
+    <UserControl.Resources>
+        <Style x:Key="ExistingOrderRowStyle" TargetType="dxg:RowControl">
+            <Setter Property="Background" Value="#FFE8E8E8"/>
+        </Style>
+    </UserControl.Resources>
+    
     <dxmvvm:Interaction.Behaviors>
         <dxmvvm:EventToCommand EventName="Loaded" Command="{Binding LoadedCommand}"/>
     </dxmvvm:Interaction.Behaviors>
@@ -144,42 +150,106 @@
                             </Grid.RowDefinitions>
                             
                             <!-- Order Items List -->
-                            <dxg:GridControl Grid.Row="0" ItemsSource="{Binding OrderItems}"
-                                             ShowBorder="False">
-                                <dxg:GridControl.View>
-                                    <dxg:TableView ShowGroupPanel="False"
-                                                   AllowEditing="False"
-                                                   AutoWidth="True">
-                                        <dxg:TableView.RowCellMenuCustomizations>
-                                            <dxb:BarButtonItem Content="삭제" 
-                                                               Command="{Binding DataContext.RemoveOrderItemCommand, 
-                                                                         RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                               CommandParameter="{Binding Row}"/>
-                                        </dxg:TableView.RowCellMenuCustomizations>
-                                    </dxg:TableView>
-                                </dxg:GridControl.View>
+                            <Grid Grid.Row="0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" MinHeight="0"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
                                 
-                                <dxg:GridColumn FieldName="MenuItemName" Header="메뉴명" Width="*"/>
-                                <dxg:GridColumn FieldName="UnitPrice" Header="단가" Width="80">
-                                    <dxg:GridColumn.EditSettings>
-                                        <dxe:TextEditSettings DisplayFormat="N0" Mask="n0"/>
-                                    </dxg:GridColumn.EditSettings>
-                                </dxg:GridColumn>
-                                <dxg:GridColumn FieldName="Quantity" Header="수량" Width="60">
-                                    <dxg:GridColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <dxe:SpinEdit Value="{Binding Row.Quantity, Mode=TwoWay}"
-                                                          MinValue="1" MaxValue="99"
-                                                          IsTextEditable="False"/>
-                                        </DataTemplate>
-                                    </dxg:GridColumn.CellTemplate>
-                                </dxg:GridColumn>
-                                <dxg:GridColumn FieldName="SubTotal" Header="금액" Width="100">
-                                    <dxg:GridColumn.EditSettings>
-                                        <dxe:TextEditSettings DisplayFormat="N0" Mask="n0"/>
-                                    </dxg:GridColumn.EditSettings>
-                                </dxg:GridColumn>
-                            </dxg:GridControl>
+                                <!-- Existing Order Items -->
+                                <dxlc:GroupBox Grid.Row="0" Header="이전 주문" Margin="0,0,0,10" 
+                                               Visibility="{Binding ExistingOrderItems.Count, Converter={dxmvvm:NumericToVisibilityConverter}}">
+                                    <Grid Height="150">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <dxg:GridControl Grid.Row="0" ItemsSource="{Binding ExistingOrderItems}"
+                                                         ShowBorder="False">
+                                            <dxg:GridControl.View>
+                                                <dxg:TableView ShowGroupPanel="False"
+                                                               AllowEditing="False"
+                                                               AutoWidth="True"
+                                                               RowStyle="{StaticResource ExistingOrderRowStyle}"/>
+                                            </dxg:GridControl.View>
+                                            
+                                            <dxg:GridColumn FieldName="MenuItemName" Header="메뉴명" Width="*"/>
+                                            <dxg:GridColumn FieldName="Quantity" Header="수량" Width="60"/>
+                                            <dxg:GridColumn FieldName="SubTotal" Header="금액" Width="100">
+                                                <dxg:GridColumn.EditSettings>
+                                                    <dxe:TextEditSettings DisplayFormat="N0" Mask="n0"/>
+                                                </dxg:GridColumn.EditSettings>
+                                            </dxg:GridColumn>
+                                        </dxg:GridControl>
+                                        
+                                        <TextBlock Grid.Row="1" Text="{Binding ExistingOrderAmount, StringFormat='소계: {0:N0}원'}"
+                                                   HorizontalAlignment="Right" Margin="0,5,0,0"
+                                                   FontWeight="Bold"/>
+                                    </Grid>
+                                </dxlc:GroupBox>
+                                
+                                <!-- New Order Items -->
+                                <dxlc:GroupBox Grid.Row="1" Header="새 주문" Margin="0">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <dxg:GridControl Grid.Row="0" ItemsSource="{Binding NewOrderItems}"
+                                                         ShowBorder="False">
+                                            <dxg:GridControl.View>
+                                                <dxg:TableView ShowGroupPanel="False"
+                                                               AllowEditing="False"
+                                                               AutoWidth="True"/>
+                                            </dxg:GridControl.View>
+                                            
+                                            <dxg:GridColumn FieldName="MenuItemName" Header="메뉴명" Width="*"/>
+                                            <dxg:GridColumn FieldName="UnitPrice" Header="단가" Width="80" Visible="False"/>
+                                            <dxg:GridColumn FieldName="Quantity" Header="수량" Width="60">
+                                                <dxg:GridColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                            <dx:SimpleButton Content="-" Width="20" Height="20"
+                                                                             Command="{Binding DataContext.DecreaseQuantityCommand,
+                                                                                       RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                             CommandParameter="{Binding Row}"/>
+                                                            <TextBlock Text="{Binding Row.Quantity}" 
+                                                                       VerticalAlignment="Center" Margin="10,0"
+                                                                       MinWidth="20" TextAlignment="Center"/>
+                                                            <dx:SimpleButton Content="+" Width="20" Height="20"
+                                                                             Command="{Binding DataContext.IncreaseQuantityCommand,
+                                                                                       RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                             CommandParameter="{Binding Row}"/>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </dxg:GridColumn.CellTemplate>
+                                            </dxg:GridColumn>
+                                            <dxg:GridColumn FieldName="SubTotal" Header="금액" Width="100">
+                                                <dxg:GridColumn.EditSettings>
+                                                    <dxe:TextEditSettings DisplayFormat="N0" Mask="n0"/>
+                                                </dxg:GridColumn.EditSettings>
+                                            </dxg:GridColumn>
+                                            <dxg:GridColumn Header="" Width="30" FixedWidth="True">
+                                                <dxg:GridColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <dx:SimpleButton Content="X" 
+                                                                         Command="{Binding DataContext.RemoveOrderItemCommand,
+                                                                                   RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                         CommandParameter="{Binding Row}"
+                                                                         ToolTip="삭제"
+                                                                         Width="25" Height="25"/>
+                                                    </DataTemplate>
+                                                </dxg:GridColumn.CellTemplate>
+                                            </dxg:GridColumn>
+                                        </dxg:GridControl>
+                                        
+                                        <TextBlock Grid.Row="1" Text="{Binding NewOrderAmount, StringFormat='소계: {0:N0}원'}"
+                                                   HorizontalAlignment="Right" Margin="0,5,0,0"
+                                                   FontWeight="Bold" Foreground="Blue"
+                                                   Visibility="{Binding NewOrderItems.Count, Converter={dxmvvm:NumericToVisibilityConverter}}"/>
+                                    </Grid>
+                                </dxlc:GroupBox>
+                            </Grid>
                             
                             <!-- Total Amount -->
                             <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="0,1,0,0" 

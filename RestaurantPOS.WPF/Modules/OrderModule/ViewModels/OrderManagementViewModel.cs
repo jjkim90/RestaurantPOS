@@ -29,8 +29,12 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         private ObservableCollection<CategoryViewModel> _categories;
         private ObservableCollection<MenuItemViewModel> _menuItems;
         private ObservableCollection<OrderItemViewModel> _orderItems;
+        private ObservableCollection<OrderItemViewModel> _existingOrderItems;  // 기존 주문 항목
+        private ObservableCollection<OrderItemViewModel> _newOrderItems;  // 새 주문 항목
         private CategoryViewModel _selectedCategory;
         private decimal _totalAmount;
+        private decimal _existingOrderAmount;  // 기존 주문 금액
+        private decimal _newOrderAmount;  // 새 주문 금액
 
         public OrderManagementViewModel(IUnitOfWork unitOfWork, IRegionManager regionManager, RestaurantPOS.Core.Interfaces.IMenuCacheService menuCacheService, IOrderService orderService)
         {
@@ -42,6 +46,8 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
             Categories = new ObservableCollection<CategoryViewModel>();
             MenuItems = new ObservableCollection<MenuItemViewModel>();
             OrderItems = new ObservableCollection<OrderItemViewModel>();
+            ExistingOrderItems = new ObservableCollection<OrderItemViewModel>();
+            NewOrderItems = new ObservableCollection<OrderItemViewModel>();
             
             // Commands
             BackToTableCommand = new DelegateCommand(OnBackToTable);
@@ -50,6 +56,8 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
             RemoveOrderItemCommand = new DelegateCommand<OrderItemViewModel>(OnRemoveOrderItem);
             ConfirmOrderCommand = new DelegateCommand(OnConfirmOrder, CanConfirmOrder);
             PaymentCommand = new DelegateCommand(OnPayment, CanPayment);
+            IncreaseQuantityCommand = new DelegateCommand<OrderItemViewModel>(OnIncreaseQuantity);
+            DecreaseQuantityCommand = new DelegateCommand<OrderItemViewModel>(OnDecreaseQuantity);
         }
 
         #region Properties
@@ -88,6 +96,30 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
             get => _totalAmount;
             set => SetProperty(ref _totalAmount, value);
         }
+        
+        public ObservableCollection<OrderItemViewModel> ExistingOrderItems
+        {
+            get => _existingOrderItems;
+            set => SetProperty(ref _existingOrderItems, value);
+        }
+        
+        public ObservableCollection<OrderItemViewModel> NewOrderItems
+        {
+            get => _newOrderItems;
+            set => SetProperty(ref _newOrderItems, value);
+        }
+        
+        public decimal ExistingOrderAmount
+        {
+            get => _existingOrderAmount;
+            set => SetProperty(ref _existingOrderAmount, value);
+        }
+        
+        public decimal NewOrderAmount
+        {
+            get => _newOrderAmount;
+            set => SetProperty(ref _newOrderAmount, value);
+        }
         #endregion
 
         #region Commands
@@ -97,6 +129,8 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         public ICommand RemoveOrderItemCommand { get; }
         public ICommand ConfirmOrderCommand { get; }
         public ICommand PaymentCommand { get; }
+        public ICommand IncreaseQuantityCommand { get; }
+        public ICommand DecreaseQuantityCommand { get; }
         #endregion
 
         #region Command Handlers
@@ -128,7 +162,8 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         {
             if (menuItem == null) return;
             
-            var existingItem = OrderItems.FirstOrDefault(x => x.MenuItemId == menuItem.MenuItemId);
+            // 새 주문 항목에서만 찾기
+            var existingItem = NewOrderItems.FirstOrDefault(x => x.MenuItemId == menuItem.MenuItemId);
             if (existingItem != null)
             {
                 existingItem.Quantity++;
@@ -136,13 +171,22 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
             }
             else
             {
-                OrderItems.Add(new OrderItemViewModel
+                var newItem = new OrderItemViewModel
                 {
                     MenuItemId = menuItem.MenuItemId,
                     MenuItemName = menuItem.ItemName,
                     UnitPrice = menuItem.Price,
-                    Quantity = 1
-                });
+                    Quantity = 1,
+                    IsNewItem = true
+                };
+                newItem.PropertyChanged += (s, e) => 
+                {
+                    if (e.PropertyName == nameof(OrderItemViewModel.SubTotal))
+                    {
+                        UpdateTotalAmount();
+                    }
+                };
+                NewOrderItems.Add(newItem);
             }
             
             UpdateTotalAmount();
@@ -154,54 +198,105 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         {
             if (orderItem == null) return;
             
-            OrderItems.Remove(orderItem);
-            UpdateTotalAmount();
-            ((DelegateCommand)ConfirmOrderCommand).RaiseCanExecuteChanged();
-            ((DelegateCommand)PaymentCommand).RaiseCanExecuteChanged();
+            // 새 항목만 삭제 가능
+            if (orderItem.IsNewItem && NewOrderItems.Contains(orderItem))
+            {
+                NewOrderItems.Remove(orderItem);
+                UpdateTotalAmount();
+                ((DelegateCommand)ConfirmOrderCommand).RaiseCanExecuteChanged();
+                ((DelegateCommand)PaymentCommand).RaiseCanExecuteChanged();
+            }
+        }
+        
+        private void OnIncreaseQuantity(OrderItemViewModel orderItem)
+        {
+            if (orderItem == null || !orderItem.IsNewItem) return;
+            
+            if (orderItem.Quantity < 99)
+            {
+                orderItem.Quantity++;
+            }
+        }
+        
+        private void OnDecreaseQuantity(OrderItemViewModel orderItem)
+        {
+            if (orderItem == null || !orderItem.IsNewItem) return;
+            
+            if (orderItem.Quantity > 1)
+            {
+                orderItem.Quantity--;
+            }
         }
 
         private async void OnConfirmOrder()
         {
             try
             {
-                // OrderItemDTO 배열 생성
-                var orderItems = OrderItems.Select(oi => new OrderItemDTO
+                if (!NewOrderItems.Any())
+                {
+                    System.Windows.MessageBox.Show("추가할 주문 항목이 없습니다.", "알림", 
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
+                // 새 주문 항목들을 OrderItemDTO로 변환
+                var newOrderItems = NewOrderItems.Select(oi => new OrderItemDTO
                 {
                     MenuItemId = oi.MenuItemId,
                     MenuItemName = oi.MenuItemName,
                     Quantity = oi.Quantity,
                     UnitPrice = oi.UnitPrice,
                     SubTotal = oi.SubTotal
-                }).ToArray();
+                }).ToList();
 
-                // 주문 생성
-                var createdOrder = await _orderService.CreateOrderAsync(_currentTableId, orderItems);
-                _currentOrderId = createdOrder.OrderId;
+                OrderDTO updatedOrder;
                 
-                // 테이블 상태를 사용중으로 변경
-                await _dbSemaphore.WaitAsync();
-                try
+                // 기존 주문이 있으면 항목 추가, 없으면 새 주문 생성
+                if (_currentOrderId > 0)
                 {
-                    var table = await _unitOfWork.TableRepository.GetByIdAsync(_currentTableId);
-                    if (table != null && table.TableStatus == Core.Enums.TableStatus.Available)
+                    // 기존 주문에 항목 추가
+                    updatedOrder = await _orderService.AddOrderItemsAsync(_currentOrderId, newOrderItems);
+                }
+                else
+                {
+                    // 새 주문 생성
+                    var order = await _orderService.GetOrCreateActiveOrderAsync(_currentTableId);
+                    _currentOrderId = order.OrderId;
+                    updatedOrder = await _orderService.AddOrderItemsAsync(_currentOrderId, newOrderItems);
+                    
+                    // 첫 주문일 때만 테이블 상태 변경
+                    await _dbSemaphore.WaitAsync();
+                    try
                     {
-                        table.TableStatus = Core.Enums.TableStatus.Occupied;
-                        table.UpdatedAt = DateTime.Now;
-                        table.LastOrderTime = DateTime.Now;
-                        _unitOfWork.TableRepository.Update(table);
-                        await _unitOfWork.SaveChangesAsync();
+                        var table = await _unitOfWork.TableRepository.GetByIdAsync(_currentTableId);
+                        if (table != null && table.TableStatus == Core.Enums.TableStatus.Available)
+                        {
+                            table.TableStatus = Core.Enums.TableStatus.Occupied;
+                            table.UpdatedAt = DateTime.Now;
+                            table.LastOrderTime = DateTime.Now;
+                            _unitOfWork.TableRepository.Update(table);
+                            await _unitOfWork.SaveChangesAsync();
+                        }
+                    }
+                    finally
+                    {
+                        _dbSemaphore.Release();
                     }
                 }
-                finally
-                {
-                    _dbSemaphore.Release();
-                }
                 
-                // 주문 목록 초기화
-                OrderItems.Clear();
+                // 새 항목들을 주방으로 전송 (확정)
+                await _orderService.ConfirmPendingItemsAsync(_currentOrderId);
+                
+                // 새 주문 항목을 기존 주문 항목으로 이동
+                foreach (var item in NewOrderItems)
+                {
+                    item.IsNewItem = false;
+                    ExistingOrderItems.Add(item);
+                }
+                NewOrderItems.Clear();
                 UpdateTotalAmount();
                 
-                System.Windows.MessageBox.Show($"주문번호 {createdOrder.OrderNumber}가 주방으로 전송되었습니다.", "주문 확정", 
+                System.Windows.MessageBox.Show($"주문번호 {updatedOrder.OrderNumber}의 추가 주문이 주방으로 전송되었습니다.", "주문 확정", 
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
                     
                 // TODO: 프린터로 주문 전표 출력
@@ -217,22 +312,32 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         {
             try
             {
-                // 현재 주문이 없으면 주문을 먼저 생성
-                if (_currentOrderId == 0 && OrderItems.Any())
+                // 새 주문 항목이 있으면 먼저 확정
+                if (NewOrderItems.Any())
                 {
-                    OnConfirmOrder();
-                    return;
+                    var result = System.Windows.MessageBox.Show(
+                        "확정되지 않은 주문이 있습니다. 먼저 주문을 확정하시겠습니까?", 
+                        "주문 확정", 
+                        System.Windows.MessageBoxButton.YesNo, 
+                        System.Windows.MessageBoxImage.Question);
+                    
+                    if (result == System.Windows.MessageBoxResult.Yes)
+                    {
+                        OnConfirmOrder();
+                        return;
+                    }
                 }
 
-                if (_currentOrderId == 0)
+                // 결제할 주문이 없는지 확인
+                if (_currentOrderId == 0 || !ExistingOrderItems.Any())
                 {
                     System.Windows.MessageBox.Show("결제할 주문이 없습니다.", "알림", 
                         System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                     return;
                 }
 
-                // 현재 주문 정보 조회
-                var currentOrder = await _orderService.GetActiveOrderByTableIdAsync(_currentTableId);
+                // 최신 주문 정보 조회
+                var currentOrder = await _orderService.GetOrderWithDetailsAsync(_currentOrderId);
                 if (currentOrder == null)
                 {
                     System.Windows.MessageBox.Show("주문 정보를 찾을 수 없습니다.", "오류", 
@@ -267,7 +372,8 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
                     var completedOrder = await _orderService.ProcessPaymentAsync(_currentOrderId, paymentMethod);
                     
                     // UI 초기화
-                    OrderItems.Clear();
+                    ExistingOrderItems.Clear();
+                    NewOrderItems.Clear();
                     UpdateTotalAmount();
                     _currentOrderId = 0;
                     
@@ -290,8 +396,8 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
             }
         }
 
-        private bool CanConfirmOrder() => OrderItems.Any();
-        private bool CanPayment() => OrderItems.Any();
+        private bool CanConfirmOrder() => NewOrderItems.Any();
+        private bool CanPayment() => ExistingOrderItems.Any() || NewOrderItems.Any();
         #endregion
 
         #region Helper Methods
@@ -375,19 +481,44 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
                     _currentOrderId = existingOrder.OrderId;
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        OrderItems.Clear();
-                        foreach (var detail in existingOrder.OrderDetails)
+                        ExistingOrderItems.Clear();
+                        NewOrderItems.Clear();
+                        
+                        // 기존 주문 항목 로드 (확정된 항목들만)
+                        foreach (var detail in existingOrder.OrderDetails.Where(d => d.Status == "Confirmed"))
                         {
                             var orderItem = new OrderItemViewModel
                             {
                                 MenuItemId = detail.MenuItemId,
                                 MenuItemName = detail.MenuItemName,
                                 UnitPrice = detail.UnitPrice,
-                                Quantity = detail.Quantity
+                                Quantity = detail.Quantity,
+                                IsNewItem = false
+                            };
+                            orderItem.PropertyChanged += (s, e) => 
+                            {
+                                if (e.PropertyName == nameof(OrderItemViewModel.SubTotal))
+                                {
+                                    UpdateTotalAmount();
+                                }
                             };
                             orderItem.UpdateSubTotal();
-                            OrderItems.Add(orderItem);
+                            ExistingOrderItems.Add(orderItem);
                         }
+                        
+                        UpdateTotalAmount();
+                        ((DelegateCommand)ConfirmOrderCommand).RaiseCanExecuteChanged();
+                        ((DelegateCommand)PaymentCommand).RaiseCanExecuteChanged();
+                    });
+                }
+                else
+                {
+                    // 주문이 없으면 초기화
+                    _currentOrderId = 0;
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        ExistingOrderItems.Clear();
+                        NewOrderItems.Clear();
                         UpdateTotalAmount();
                         ((DelegateCommand)ConfirmOrderCommand).RaiseCanExecuteChanged();
                         ((DelegateCommand)PaymentCommand).RaiseCanExecuteChanged();
@@ -402,7 +533,9 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
 
         private void UpdateTotalAmount()
         {
-            TotalAmount = OrderItems.Sum(x => x.SubTotal);
+            ExistingOrderAmount = ExistingOrderItems.Sum(x => x.SubTotal);
+            NewOrderAmount = NewOrderItems.Sum(x => x.SubTotal);
+            TotalAmount = ExistingOrderAmount + NewOrderAmount;
         }
         #endregion
 
@@ -418,7 +551,12 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
 
         public bool IsNavigationTarget(NavigationContext navigationContext) => true;
 
-        public void OnNavigatedFrom(NavigationContext navigationContext) { }
+        public void OnNavigatedFrom(NavigationContext navigationContext) 
+        {
+            // 다른 화면으로 이동할 때 미확정 주문 초기화
+            NewOrderItems.Clear();
+            UpdateTotalAmount();
+        }
 
         private async void LoadTableInfoAsync()
         {
@@ -478,10 +616,17 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
     {
         private int _quantity;
         private decimal _subTotal;
+        private bool _isNewItem;
 
         public int MenuItemId { get; set; }
         public string MenuItemName { get; set; }
         public decimal UnitPrice { get; set; }
+        
+        public bool IsNewItem
+        {
+            get => _isNewItem;
+            set => SetProperty(ref _isNewItem, value);
+        }
         
         public int Quantity
         {

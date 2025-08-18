@@ -28,6 +28,12 @@ namespace RestaurantPOS.Core.DTOs
         public decimal UnitPrice { get; set; }
         public decimal SubTotal { get; set; }
         public string? Note { get; set; }
+        
+        // 새로 추가된 속성들
+        public bool IsNewItem { get; set; }  // 새로 추가된 항목인지 구분
+        public string Status { get; set; } = "Pending";  // 항목 상태 (Pending, Confirmed, Cancelled)
+        public DateTime? ConfirmedAt { get; set; }  // 주방 확정 시간
+        public DateTime CreatedAt { get; set; }  // 생성 시간
     }
 
     public class OrderItemDTO
