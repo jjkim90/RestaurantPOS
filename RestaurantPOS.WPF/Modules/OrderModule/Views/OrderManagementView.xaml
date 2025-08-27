@@ -173,7 +173,7 @@
                                                                RowStyle="{StaticResource ExistingOrderRowStyle}"/>
                                             </dxg:GridControl.View>
                                             
-                                            <dxg:GridColumn FieldName="MenuItemName" Header="메뉴명" Width="*"/>
+                                            <dxg:GridColumn FieldName="MenuItemName" Header="메뉴명" Width="200" MinWidth="150"/>
                                             <dxg:GridColumn FieldName="Quantity" Header="수량" Width="60"/>
                                             <dxg:GridColumn FieldName="SubTotal" Header="금액" Width="100">
                                                 <dxg:GridColumn.EditSettings>
@@ -203,23 +203,27 @@
                                                                AutoWidth="True"/>
                                             </dxg:GridControl.View>
                                             
-                                            <dxg:GridColumn FieldName="MenuItemName" Header="메뉴명" Width="*"/>
+                                            <dxg:GridColumn FieldName="MenuItemName" Header="메뉴명" Width="200" MinWidth="150"/>
                                             <dxg:GridColumn FieldName="UnitPrice" Header="단가" Width="80" Visible="False"/>
                                             <dxg:GridColumn FieldName="Quantity" Header="수량" Width="60">
                                                 <dxg:GridColumn.CellTemplate>
                                                     <DataTemplate>
                                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                            <dx:SimpleButton Content="-" Width="20" Height="20"
+                                                            <dx:SimpleButton Width="20" Height="20"
+                                                                             Glyph="{dx:DXImage Image=Remove_16x16.png}"
                                                                              Command="{Binding DataContext.DecreaseQuantityCommand,
                                                                                        RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                             CommandParameter="{Binding Row}"/>
+                                                                             CommandParameter="{Binding Row}"
+                                                                             ToolTip="수량 감소"/>
                                                             <TextBlock Text="{Binding Row.Quantity}" 
                                                                        VerticalAlignment="Center" Margin="10,0"
                                                                        MinWidth="20" TextAlignment="Center"/>
-                                                            <dx:SimpleButton Content="+" Width="20" Height="20"
+                                                            <dx:SimpleButton Width="20" Height="20"
+                                                                             Glyph="{dx:DXImage Image=Add_16x16.png}"
                                                                              Command="{Binding DataContext.IncreaseQuantityCommand,
                                                                                        RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                             CommandParameter="{Binding Row}"/>
+                                                                             CommandParameter="{Binding Row}"
+                                                                             ToolTip="수량 증가"/>
                                                         </StackPanel>
                                                     </DataTemplate>
                                                 </dxg:GridColumn.CellTemplate>
@@ -232,12 +236,12 @@
                                             <dxg:GridColumn Header="" Width="30" FixedWidth="True">
                                                 <dxg:GridColumn.CellTemplate>
                                                     <DataTemplate>
-                                                        <dx:SimpleButton Content="X" 
+                                                        <dx:SimpleButton Width="25" Height="25"
+                                                                         Glyph="{dx:DXImage Image=Delete_16x16.png}"
                                                                          Command="{Binding DataContext.RemoveOrderItemCommand,
                                                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                          CommandParameter="{Binding Row}"
-                                                                         ToolTip="삭제"
-                                                                         Width="25" Height="25"/>
+                                                                         ToolTip="삭제"/>
                                                     </DataTemplate>
                                                 </dxg:GridColumn.CellTemplate>
                                             </dxg:GridColumn>

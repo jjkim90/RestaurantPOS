@@ -10,6 +10,19 @@ namespace RestaurantPOS.Data.Context
         {
         }
 
+        // Design-time constructor
+        public RestaurantContext()
+        {
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            if (!optionsBuilder.IsConfigured)
+            {
+                optionsBuilder.UseSqlServer(@"Server=.\SQLEXPRESS;Database=RestaurantPOS;Integrated Security=true;TrustServerCertificate=true;");
+            }
+        }
+
         public DbSet<Space> Spaces { get; set; }
         public DbSet<Table> Tables { get; set; }
         public DbSet<Category> Categories { get; set; }

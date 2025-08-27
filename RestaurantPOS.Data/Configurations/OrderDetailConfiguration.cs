@@ -29,6 +29,18 @@ namespace RestaurantPOS.Data.Configurations
             builder.Property(od => od.CreatedAt)
                 .HasDefaultValueSql("SYSDATETIME()");
 
+            // 새로 추가된 속성들 구성
+            builder.Property(od => od.IsNewItem)
+                .HasDefaultValue(false);
+
+            builder.Property(od => od.Status)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .HasDefaultValue(RestaurantPOS.Core.Enums.OrderDetailStatus.Pending);
+
+            builder.Property(od => od.ConfirmedAt)
+                .IsRequired(false);
+
             // Relationships
             builder.HasOne(od => od.Order)
                 .WithMany(o => o.OrderDetails)

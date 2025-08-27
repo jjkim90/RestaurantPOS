@@ -27,7 +27,8 @@ namespace RestaurantPOS.Services.Mappings
             CreateMap<Order, OrderDTO>()
                 .ForMember(dest => dest.TableName, opt => opt.MapFrom(src => src.Table.TableName));
             CreateMap<OrderDetail, OrderDetailDTO>()
-                .ForMember(dest => dest.MenuItemName, opt => opt.MapFrom(src => src.MenuItem.ItemName));
+                .ForMember(dest => dest.MenuItemName, opt => opt.MapFrom(src => src.MenuItem.ItemName))
+                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
 
             // MenuItem mappings (나중에 추가 예정)
             // CreateMap<MenuItem, MenuItemDto>();
