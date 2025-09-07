@@ -74,7 +74,9 @@ namespace RestaurantPOS.Services
                 .Include(o => o.Table)
                 .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.MenuItem)
-                .FirstOrDefaultAsync(o => o.TableId == tableId && (o.Status == "Pending" || o.Status == "InProgress"));
+                .Where(o => o.TableId == tableId && (o.Status == "Pending" || o.Status == "InProgress"))
+                .OrderByDescending(o => o.OrderDate)  // 가장 최근 주문을 가져오도록 정렬
+                .FirstOrDefaultAsync();
 
             return order != null ? _mapper.Map<OrderDTO>(order) : null;
         }
@@ -233,6 +235,12 @@ namespace RestaurantPOS.Services
             {
                 order.IsPrinted = true;
                 order.UpdatedAt = DateTime.Now;
+                
+                // Order의 TotalAmount를 모든 OrderDetail의 합계로 재계산
+                var allDetails = await _unitOfWork.OrderDetailRepository
+                    .FindAsync(od => od.OrderId == orderId);
+                order.TotalAmount = allDetails.Sum(od => od.SubTotal);
+                
                 _unitOfWork.OrderRepository.Update(order);
             }
 

@@ -484,8 +484,8 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
                         ExistingOrderItems.Clear();
                         NewOrderItems.Clear();
                         
-                        // 기존 주문 항목 로드 (확정된 항목들만)
-                        foreach (var detail in existingOrder.OrderDetails.Where(d => d.Status == "Confirmed"))
+                        // 기존 주문 항목 로드 (모든 항목)
+                        foreach (var detail in existingOrder.OrderDetails)
                         {
                             var orderItem = new OrderItemViewModel
                             {
