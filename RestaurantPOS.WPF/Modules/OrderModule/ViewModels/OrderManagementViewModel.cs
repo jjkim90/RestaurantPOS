@@ -21,6 +21,7 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         private readonly IRegionManager _regionManager;
         private readonly RestaurantPOS.Core.Interfaces.IMenuCacheService _menuCacheService;
         private readonly IOrderService _orderService;
+        private readonly IPrintService _printService;
         private readonly SemaphoreSlim _dbSemaphore = new SemaphoreSlim(1, 1);
         
         private int _currentTableId;
@@ -36,12 +37,13 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         private decimal _existingOrderAmount;  // 기존 주문 금액
         private decimal _newOrderAmount;  // 새 주문 금액
 
-        public OrderManagementViewModel(IUnitOfWork unitOfWork, IRegionManager regionManager, RestaurantPOS.Core.Interfaces.IMenuCacheService menuCacheService, IOrderService orderService)
+        public OrderManagementViewModel(IUnitOfWork unitOfWork, IRegionManager regionManager, RestaurantPOS.Core.Interfaces.IMenuCacheService menuCacheService, IOrderService orderService, IPrintService printService)
         {
             _unitOfWork = unitOfWork;
             _regionManager = regionManager;
             _menuCacheService = menuCacheService;
             _orderService = orderService;
+            _printService = printService;
             
             Categories = new ObservableCollection<CategoryViewModel>();
             MenuItems = new ObservableCollection<MenuItemViewModel>();
@@ -383,7 +385,21 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
                         System.Windows.MessageBoxButton.OK, 
                         System.Windows.MessageBoxImage.Information);
                         
-                    // TODO: 영수증 출력
+                    // 영수증 출력
+                    var printResult = await _printService.PrintReceiptAsync(completedOrder);
+                    if (!printResult)
+                    {
+                        var retryResult = System.Windows.MessageBox.Show(
+                            "영수증 출력에 실패했습니다. 다시 시도하시겠습니까?", 
+                            "출력 실패", 
+                            System.Windows.MessageBoxButton.YesNo, 
+                            System.Windows.MessageBoxImage.Warning);
+                            
+                        if (retryResult == System.Windows.MessageBoxResult.Yes)
+                        {
+                            await _printService.PrintReceiptAsync(completedOrder);
+                        }
+                    }
                     
                     // 테이블 화면으로 돌아가기
                     _regionManager.RequestNavigate("MainRegion", "TableManagementView");
