@@ -15,11 +15,13 @@ namespace RestaurantPOS.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IPrintService _printService;
 
-        public OrderService(IUnitOfWork unitOfWork, IMapper mapper)
+        public OrderService(IUnitOfWork unitOfWork, IMapper mapper, IPrintService printService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _printService = printService;
         }
 
         public async Task<OrderDTO> CreateOrderAsync(int tableId, OrderItemDTO[] orderItems)
@@ -218,9 +220,16 @@ namespace RestaurantPOS.Services
 
         public async Task<OrderDTO> ConfirmPendingItemsAsync(int orderId)
         {
-            var pendingDetails = await _unitOfWork.OrderDetailRepository
-                .FindAsync(od => od.OrderId == orderId && od.Status == OrderDetailStatus.Pending);
+            // Pending 상태의 항목들을 먼저 조회 (주방 출력용)
+            var pendingDetails = await _unitOfWork.OrderDetailRepository.Query()
+                .Include(od => od.MenuItem)
+                .Where(od => od.OrderId == orderId && od.Status == OrderDetailStatus.Pending)
+                .ToListAsync();
 
+            // Pending 항목들을 DTO로 변환 (주방 출력용)
+            var pendingItemDTOs = _mapper.Map<List<OrderDetailDTO>>(pendingDetails);
+
+            // 상태를 Confirmed로 변경
             foreach (var detail in pendingDetails)
             {
                 detail.Status = OrderDetailStatus.Confirmed;
@@ -245,6 +254,21 @@ namespace RestaurantPOS.Services
             }
 
             await _unitOfWork.SaveChangesAsync();
+
+            // 주방 프린터로 출력 (pending 항목들만)
+            if (pendingItemDTOs.Any())
+            {
+                var orderDTO = await GetOrderWithDetailsAsync(orderId);
+                try
+                {
+                    await _printService.PrintKitchenOrderAsync(orderDTO, pendingItemDTOs);
+                }
+                catch (Exception ex)
+                {
+                    // 주방 프린터 출력 실패는 주문 처리를 막지 않음
+                    System.Diagnostics.Debug.WriteLine($"주방 프린터 출력 실패: {ex.Message}");
+                }
+            }
 
             return await GetOrderWithDetailsAsync(orderId);
         }
