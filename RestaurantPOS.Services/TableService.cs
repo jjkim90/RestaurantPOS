@@ -124,9 +124,9 @@ namespace RestaurantPOS.Services
 
         public async Task<bool> CanDeleteSpaceAsync(int spaceId)
         {
-            // 테이블이 있는지 확인
+            // 삭제되지 않은 테이블이 있는지 확인
             var tables = await _unitOfWork.TableRepository
-                .FindAsync(t => t.SpaceId == spaceId);
+                .FindAsync(t => t.SpaceId == spaceId && !t.IsDeleted);
             
             if (tables.Any())
             {
@@ -150,7 +150,7 @@ namespace RestaurantPOS.Services
         public async Task<IEnumerable<TableDto>> GetTablesBySpaceAsync(int spaceId)
         {
             var tables = await _unitOfWork.TableRepository
-                .FindAsync(t => t.SpaceId == spaceId);
+                .FindAsync(t => t.SpaceId == spaceId && !t.IsDeleted);
             
             var tableDtos = new List<TableDto>();
             foreach (var table in tables.OrderBy(t => t.TableNumber))
@@ -203,7 +203,7 @@ namespace RestaurantPOS.Services
             if (space == null)
                 throw new InvalidOperationException($"Space with ID {createTableDto.SpaceId} not found.");
 
-            // 테이블 이름 중복 체크
+            // 테이블 이름 중복 체크 (삭제되지 않은 테이블 중에서)
             var isUnique = await IsTableNameUniqueInSpaceAsync(
                 createTableDto.TableName, createTableDto.SpaceId);
             if (!isUnique)
@@ -256,7 +256,7 @@ namespace RestaurantPOS.Services
         public async Task<bool> DeleteTableAsync(int tableId)
         {
             var table = await _unitOfWork.TableRepository.GetByIdAsync(tableId);
-            if (table == null)
+            if (table == null || table.IsDeleted)
                 return false;
 
             if (!table.IsEditable)
@@ -269,9 +269,14 @@ namespace RestaurantPOS.Services
                           o.Status == "InProgress"));
             
             if (activeOrders.Any())
-                throw new InvalidOperationException("Cannot delete table with active orders.");
+                throw new InvalidOperationException("사용 중인 테이블은 삭제할 수 없습니다. 먼저 주문을 완료하거나 취소해주세요.");
 
-            _unitOfWork.TableRepository.Remove(table);
+            // 논리적 삭제 수행
+            table.IsDeleted = true;
+            table.DeletedAt = DateTime.Now;
+            table.UpdatedAt = DateTime.Now;
+
+            _unitOfWork.TableRepository.Update(table);
             await _unitOfWork.SaveChangesAsync();
 
             return true;
@@ -388,7 +393,7 @@ namespace RestaurantPOS.Services
         public async Task<bool> IsTableNameUniqueInSpaceAsync(string tableName, int spaceId, int? excludeTableId = null)
         {
             var tables = await _unitOfWork.TableRepository
-                .FindAsync(t => t.TableName == tableName && t.SpaceId == spaceId);
+                .FindAsync(t => t.TableName == tableName && t.SpaceId == spaceId && !t.IsDeleted);
             
             if (excludeTableId.HasValue)
                 tables = tables.Where(t => t.TableId != excludeTableId.Value);

@@ -37,6 +37,9 @@ namespace RestaurantPOS.Data.Configurations
             builder.Property(t => t.CreatedAt)
                 .HasDefaultValueSql("SYSDATETIME()");
 
+            builder.Property(t => t.IsDeleted)
+                .HasDefaultValue(false);
+
             // Relationships
             builder.HasOne(t => t.Space)
                 .WithMany(s => s.Tables)

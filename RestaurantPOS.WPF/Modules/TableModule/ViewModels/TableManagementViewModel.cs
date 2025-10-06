@@ -1,6 +1,7 @@
 using DevExpress.Xpf.LayoutControl;
 using Prism.Commands;
 using Prism.Mvvm;
+using Prism.Regions;
 using RestaurantPOS.Core.Interfaces;
 using RestaurantPOS.WPF.Modules.TableModule.Services;
 using RestaurantPOS.WPF.Modules.TableModule.Views;
@@ -60,13 +61,31 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
         public DelegateCommand<SpaceViewModel> DeleteSpaceCommand { get; }
         public DelegateCommand<SpaceViewModel> SelectSpaceCommand { get; }
         public DelegateCommand ShowSystemTablesCommand { get; }
+        public DelegateCommand AddTableCommand { get; }
+        public DelegateCommand<TableViewModel> EditTableCommand { get; }
+        public DelegateCommand<TableViewModel> DeleteTableCommand { get; }
+        public DelegateCommand<TableViewModel> SelectTableCommand { get; }
         
         // Selected Space
         private SpaceViewModel? _selectedSpace;
         public SpaceViewModel? SelectedSpace
         {
             get { return _selectedSpace; }
-            set { SetProperty(ref _selectedSpace, value); }
+            set 
+            { 
+                SetProperty(ref _selectedSpace, value);
+                AddTableCommand?.RaiseCanExecuteChanged();
+                EditTableCommand?.RaiseCanExecuteChanged();
+                DeleteTableCommand?.RaiseCanExecuteChanged();
+            }
+        }
+        
+        // Selected Table
+        private TableViewModel? _selectedTable;
+        public TableViewModel? SelectedTable
+        {
+            get { return _selectedTable; }
+            set { SetProperty(ref _selectedTable, value); }
         }
         
         // System Tables Mode
@@ -74,7 +93,13 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
         public bool IsSystemTablesMode
         {
             get { return _isSystemTablesMode; }
-            set { SetProperty(ref _isSystemTablesMode, value); }
+            set 
+            { 
+                SetProperty(ref _isSystemTablesMode, value);
+                AddTableCommand?.RaiseCanExecuteChanged();
+                EditTableCommand?.RaiseCanExecuteChanged();
+                DeleteTableCommand?.RaiseCanExecuteChanged();
+            }
         }
 
         public TableManagementViewModel(ITableUIService tableUIService, IUnitOfWork unitOfWork, ITableService tableService)
@@ -99,6 +124,10 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
             DeleteSpaceCommand = new DelegateCommand<SpaceViewModel>(OnDeleteSpace);
             SelectSpaceCommand = new DelegateCommand<SpaceViewModel>(OnSelectSpace);
             ShowSystemTablesCommand = new DelegateCommand(OnShowSystemTables);
+            AddTableCommand = new DelegateCommand(OnAddTable, CanAddTable);
+            EditTableCommand = new DelegateCommand<TableViewModel>(OnEditTable, CanEditTable);
+            DeleteTableCommand = new DelegateCommand<TableViewModel>(OnDeleteTable, CanDeleteTable);
+            SelectTableCommand = new DelegateCommand<TableViewModel>(OnSelectTable);
 
             // Setup timer for current time
             _timer = new DispatcherTimer
@@ -133,7 +162,8 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
 
                     foreach (var space in spaces)
                     {
-                        var spaceTables = tables.Where(t => t.SpaceId == space.SpaceId)
+                        // IsDeleted가 false인 테이블만 필터링
+                        var spaceTables = tables.Where(t => t.SpaceId == space.SpaceId && !t.IsDeleted)
                             .Select(t => new TableViewModel(t))
                             .OrderBy(t => t.TableNumber);
 
@@ -310,16 +340,26 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
             }
         }
         
-        private void OnSelectSpace(SpaceViewModel space)
+        private async void OnSelectSpace(SpaceViewModel space)
         {
             if (space != null)
             {
                 IsSystemTablesMode = false;
                 SelectedSpace = space;
-                CurrentTables.Clear();
-                foreach (var table in space.Tables)
+                
+                // 데이터 새로고침 후 현재 테이블 표시
+                await LoadSpacesAndTablesAsync();
+                
+                // 새로고침된 데이터에서 선택된 공간 찾기
+                var refreshedSpace = Spaces.FirstOrDefault(s => s.SpaceId == space.SpaceId);
+                if (refreshedSpace != null)
                 {
-                    CurrentTables.Add(table);
+                    SelectedSpace = refreshedSpace;
+                    CurrentTables.Clear();
+                    foreach (var table in refreshedSpace.Tables)
+                    {
+                        CurrentTables.Add(table);
+                    }
                 }
             }
         }
@@ -330,6 +370,140 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
             SelectedSpace = null;
             
         }
+        
+        private void OnSelectTable(TableViewModel table)
+        {
+            SelectedTable = table;
+        }
+
+        #region Table Management Commands
+        
+        private bool CanAddTable()
+        {
+            // 선택된 홀이 있고, 시스템 공간이 아닌 경우에만 가능
+            return SelectedSpace != null && !IsSystemTablesMode && !SelectedSpace.IsSystem;
+        }
+
+        private async void OnAddTable()
+        {
+            if (SelectedSpace == null) return;
+
+            var dialog = new TableEditDialog();
+            
+            // 다음 테이블 번호 계산
+            var nextTableNumber = CurrentTables.Any() 
+                ? CurrentTables.Max(t => t.TableNumber) + 1 
+                : 1;
+            
+            dialog.ViewModel.InitializeForAdd(nextTableNumber);
+            
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var createDto = new Core.DTOs.CreateTableDto
+                    {
+                        SpaceId = SelectedSpace.SpaceId,
+                        TableName = dialog.ViewModel.TableName,
+                        TableNumber = dialog.ViewModel.TableNumber,
+                        TableStatus = dialog.ViewModel.SelectedTableStatus.Value,
+                        IsEditable = true
+                    };
+                    
+                    await _tableService.CreateTableAsync(createDto);
+                    
+                    // 데이터 새로고침
+                    await LoadSpacesAndTablesAsync();
+                    
+                    System.Windows.MessageBox.Show("테이블이 추가되었습니다.", "성공", 
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"테이블 추가 중 오류가 발생했습니다: {ex.Message}", 
+                        "오류", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private bool CanEditTable(TableViewModel table)
+        {
+            // 테이블이 있고, 시스템 공간이 아닌 경우에만 가능
+            return table != null && !IsSystemTablesMode && SelectedSpace != null && !SelectedSpace.IsSystem;
+        }
+
+        private async void OnEditTable(TableViewModel table)
+        {
+            if (table == null || SelectedSpace == null) return;
+
+            var dialog = new TableEditDialog();
+            dialog.ViewModel.InitializeForEdit(table);
+            
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var updateDto = new Core.DTOs.UpdateTableDto
+                    {
+                        TableName = dialog.ViewModel.TableName,
+                        TableNumber = dialog.ViewModel.TableNumber,
+                        TableStatus = dialog.ViewModel.SelectedTableStatus.Value
+                    };
+                    
+                    await _tableService.UpdateTableAsync(table.TableId, updateDto);
+                    
+                    // 데이터 새로고침
+                    await LoadSpacesAndTablesAsync();
+                    
+                    System.Windows.MessageBox.Show("테이블이 수정되었습니다.", "성공", 
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"테이블 수정 중 오류가 발생했습니다: {ex.Message}", 
+                        "오류", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private bool CanDeleteTable(TableViewModel table)
+        {
+            // 테이블이 있고, 시스템 공간이 아니며, 사용중이 아닌 경우에만 가능
+            return table != null && !IsSystemTablesMode && SelectedSpace != null && !SelectedSpace.IsSystem 
+                && table.StatusText != "사용중";
+        }
+
+        private async void OnDeleteTable(TableViewModel table)
+        {
+            if (table == null) return;
+            
+            var result = System.Windows.MessageBox.Show(
+                $"'{table.DisplayName}' 테이블을 삭제하시겠습니까?", 
+                "테이블 삭제 확인", 
+                System.Windows.MessageBoxButton.YesNo, 
+                System.Windows.MessageBoxImage.Warning);
+            
+            if (result == System.Windows.MessageBoxResult.Yes)
+            {
+                try
+                {
+                    await _tableService.DeleteTableAsync(table.TableId);
+                    
+                    // 데이터 새로고침
+                    await LoadSpacesAndTablesAsync();
+                    
+                    System.Windows.MessageBox.Show("테이블이 삭제되었습니다.", "성공", 
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"테이블 삭제 중 오류가 발생했습니다: {ex.Message}", 
+                        "오류", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
+        }
+
+        #endregion
 
         #region INavigationAware Implementation
         public void OnNavigatedTo(NavigationContext navigationContext)
@@ -381,6 +555,7 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
         public int TableId => _table.TableId;
         public int TableNumber => _table.TableNumber;
         public string DisplayName => _table.TableName;
+        public string TableStatus => _table.TableStatus.ToString();
         
         public string StatusText
         {

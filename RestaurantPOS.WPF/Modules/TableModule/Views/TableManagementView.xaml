@@ -161,22 +161,48 @@
                 
                 <!-- Space Management Buttons -->
                 <Border Grid.Row="0" Background="White" Padding="10" Margin="0,0,0,1">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <dx:SimpleButton Content="홀 추가" 
-                                         Width="80" Height="35" 
-                                         Margin="5,0"
-                                         Command="{Binding AddSpaceCommand}"/>
-                        <dx:SimpleButton Content="홀 수정" 
-                                         Width="80" Height="35" 
-                                         Margin="5,0"
-                                         Command="{Binding EditSpaceCommand}"
-                                         CommandParameter="{Binding SelectedSpace}"/>
-                        <dx:SimpleButton Content="홀 삭제" 
-                                         Width="80" Height="35" 
-                                         Margin="5,0"
-                                         Command="{Binding DeleteSpaceCommand}"
-                                         CommandParameter="{Binding SelectedSpace}"/>
-                    </StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Table Management Buttons -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
+                            <dx:SimpleButton Content="테이블 추가" 
+                                             Width="90" Height="35" 
+                                             Margin="5,0"
+                                             Command="{Binding AddTableCommand}"/>
+                            <dx:SimpleButton Content="테이블 수정" 
+                                             Width="90" Height="35" 
+                                             Margin="5,0"
+                                             Command="{Binding EditTableCommand}"
+                                             CommandParameter="{Binding SelectedTable}"/>
+                            <dx:SimpleButton Content="테이블 삭제" 
+                                             Width="90" Height="35" 
+                                             Margin="5,0"
+                                             Command="{Binding DeleteTableCommand}"
+                                             CommandParameter="{Binding SelectedTable}"/>
+                        </StackPanel>
+                        
+                        <!-- Space Management Buttons -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <dx:SimpleButton Content="홀 추가" 
+                                             Width="80" Height="35" 
+                                             Margin="5,0"
+                                             Command="{Binding AddSpaceCommand}"/>
+                            <dx:SimpleButton Content="홀 수정" 
+                                             Width="80" Height="35" 
+                                             Margin="5,0"
+                                             Command="{Binding EditSpaceCommand}"
+                                             CommandParameter="{Binding SelectedSpace}"/>
+                            <dx:SimpleButton Content="홀 삭제" 
+                                             Width="80" Height="35" 
+                                             Margin="5,0"
+                                             Command="{Binding DeleteSpaceCommand}"
+                                             CommandParameter="{Binding SelectedSpace}"/>
+                        </StackPanel>
+                    </Grid>
                 </Border>
                 
                 <!-- Content Area -->
@@ -201,6 +227,10 @@
                                         <dxmvvm:Interaction.Behaviors>
                                             <dxmvvm:EventToCommand EventName="Click" 
                                                                    Command="{Binding DataContext.TableClickCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                                   CommandParameter="{Binding}"
+                                                                   PassEventArgsToCommand="False"/>
+                                            <dxmvvm:EventToCommand EventName="MouseLeftButtonDown" 
+                                                                   Command="{Binding DataContext.SelectTableCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
                                                                    CommandParameter="{Binding}"
                                                                    PassEventArgsToCommand="False"/>
                                         </dxmvvm:Interaction.Behaviors>
