@@ -34,7 +34,8 @@ namespace RestaurantPOS.Services
                 {
                     var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
                     var categories = await unitOfWork.CategoryRepository.GetAllAsync();
-                    return categories.Where(c => c.IsActive).OrderBy(c => c.DisplayOrder).ToList();
+                    // IsActive와 함께 IsDeleted도 확인
+                    return categories.Where(c => c.IsActive && !c.IsDeleted).OrderBy(c => c.DisplayOrder).ToList();
                 }
             });
         }
@@ -53,7 +54,8 @@ namespace RestaurantPOS.Services
                 {
                     var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
                     var menuItems = await unitOfWork.MenuItemRepository.FindAsync(m => m.CategoryId == categoryId);
-                    var availableItems = menuItems.Where(m => m.IsAvailable).ToList();
+                    // IsAvailable과 함께 IsDeleted도 확인
+                    var availableItems = menuItems.Where(m => m.IsAvailable && !m.IsDeleted).ToList();
                     System.Diagnostics.Debug.WriteLine($"Found {availableItems.Count} available menu items for categoryId: {categoryId}");
                     return availableItems;
                 }
@@ -67,6 +69,12 @@ namespace RestaurantPOS.Services
             
             // 개별 카테고리의 메뉴 아이템 캐시는 필요할 때 제거
             // 실제로는 더 정교한 캐시 무효화 전략이 필요할 수 있음
+        }
+
+        public void InvalidateCategoryCache(int categoryId)
+        {
+            var cacheKey = $"{MENU_ITEMS_BY_CATEGORY_PREFIX}{categoryId}";
+            _cache.Remove(cacheKey);
         }
     }
 }

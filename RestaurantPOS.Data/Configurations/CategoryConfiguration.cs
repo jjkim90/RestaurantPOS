@@ -19,8 +19,10 @@ namespace RestaurantPOS.Data.Configurations
                 .IsRequired()
                 .HasMaxLength(50);
 
-            builder.HasIndex(c => c.CategoryName)
-                .IsUnique();
+            // Unique index only for non-deleted categories
+            builder.HasIndex(c => new { c.CategoryName, c.IsDeleted })
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
 
             builder.Property(c => c.DisplayOrder)
                 .HasDefaultValue(0);
@@ -31,8 +33,15 @@ namespace RestaurantPOS.Data.Configurations
             builder.Property(c => c.CreatedAt)
                 .HasDefaultValueSql("SYSDATETIME()");
 
+            builder.Property(c => c.IsDeleted)
+                .HasDefaultValue(false);
+
             // Index
             builder.HasIndex(c => new { c.DisplayOrder, c.IsActive });
+            builder.HasIndex(c => c.IsDeleted);
+            
+            // Global query filter to exclude soft deleted records
+            builder.HasQueryFilter(c => !c.IsDeleted);
         }
     }
 }

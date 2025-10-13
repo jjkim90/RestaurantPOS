@@ -13,10 +13,12 @@ using RestaurantPOS.Data.Context;
 using RestaurantPOS.Data.Repositories;
 using RestaurantPOS.Data.Seeders;
 using RestaurantPOS.Services;
+using RestaurantPOS.Services.Services;
 using RestaurantPOS.Services.Mappings;
 using RestaurantPOS.WPF.Infrastructure;
 using RestaurantPOS.WPF.Modules.TableModule;
 using RestaurantPOS.WPF.Modules.OrderModule;
+using RestaurantPOS.WPF.Modules.MenuModule;
 using RestaurantPOS.WPF.Views;
 using Serilog;
 using System;
@@ -42,8 +44,7 @@ namespace RestaurantPOS.WPF
         {
             moduleCatalog.AddModule<TableModule>();
             moduleCatalog.AddModule<OrderModule>();
-            // Future modules can be added here
-            // moduleCatalog.AddModule<MenuModule>();
+            moduleCatalog.AddModule<MenuModule>();
         }
 
         protected override void RegisterTypes(IContainerRegistry containerRegistry)
@@ -71,6 +72,7 @@ namespace RestaurantPOS.WPF
             // AutoMapper 설정
             var config = new MapperConfiguration(cfg => {
                 cfg.AddProfile<MappingProfile>();
+                cfg.AddProfile<MenuMappingProfile>();
             }, new Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory());
             var mapper = config.CreateMapper();
             containerRegistry.RegisterInstance<IMapper>(mapper);
@@ -86,7 +88,10 @@ namespace RestaurantPOS.WPF
             containerRegistry.RegisterSingleton<IMenuCacheService, MenuCacheService>();
             containerRegistry.RegisterScoped<IOrderService, OrderService>();
             containerRegistry.RegisterSingleton<IPrintService, PrintService>();
-            // containerRegistry.RegisterScoped<IMenuService, MenuService>();
+            containerRegistry.RegisterScoped<IMenuManagementService, MenuManagementService>();
+            
+            // Serilog ILogger 등록
+            containerRegistry.RegisterInstance<ILogger>(Log.Logger);
 
             // Views 등록
             containerRegistry.RegisterForNavigation<MainWindow>(nameof(MainWindow));

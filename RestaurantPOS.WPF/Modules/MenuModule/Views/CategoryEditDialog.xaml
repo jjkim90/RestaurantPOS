@@ -1,0 +1,52 @@
+<dx:ThemedWindow x:Class="RestaurantPOS.WPF.Modules.MenuModule.Views.CategoryEditDialog"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:dx="http://schemas.devexpress.com/winfx/2008/xaml/core"
+                 xmlns:dxlc="http://schemas.devexpress.com/winfx/2008/xaml/layoutcontrol"
+                 xmlns:dxe="http://schemas.devexpress.com/winfx/2008/xaml/editors"
+                 Title="{Binding Title}"
+                 Height="300" Width="400"
+                 WindowStartupLocation="CenterOwner"
+                 ShowInTaskbar="False">
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <dxlc:LayoutControl Grid.Row="0">
+            <dxlc:LayoutGroup Orientation="Vertical">
+                <dxlc:LayoutItem Label="Category Name:">
+                    <dxe:TextEdit Text="{Binding CategoryName, UpdateSourceTrigger=PropertyChanged}" />
+                </dxlc:LayoutItem>
+                
+                <dxlc:LayoutItem Label="Display Order:">
+                    <dxe:SpinEdit Value="{Binding DisplayOrder}" 
+                                  MinValue="1" 
+                                  MaxValue="100" 
+                                  IsFloatValue="False"/>
+                </dxlc:LayoutItem>
+                
+                <dxlc:LayoutItem Label="Active:">
+                    <CheckBox IsChecked="{Binding IsActive}" />
+                </dxlc:LayoutItem>
+            </dxlc:LayoutGroup>
+        </dxlc:LayoutControl>
+
+        <StackPanel Grid.Row="1" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right"
+                    Margin="0,20,0,0">
+            <dx:SimpleButton Content="Save" 
+                           IsDefault="True"
+                           Width="80" 
+                           Margin="0,0,10,0"
+                           Click="SaveButton_Click"/>
+            <dx:SimpleButton Content="Cancel" 
+                           IsCancel="True"
+                           Width="80"
+                           Click="CancelButton_Click"/>
+        </StackPanel>
+    </Grid>
+</dx:ThemedWindow>

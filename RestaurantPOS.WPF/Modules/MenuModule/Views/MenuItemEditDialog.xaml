@@ -1,0 +1,70 @@
+<dx:ThemedWindow x:Class="RestaurantPOS.WPF.Modules.MenuModule.Views.MenuItemEditDialog"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:dx="http://schemas.devexpress.com/winfx/2008/xaml/core"
+                 xmlns:dxlc="http://schemas.devexpress.com/winfx/2008/xaml/layoutcontrol"
+                 xmlns:dxe="http://schemas.devexpress.com/winfx/2008/xaml/editors"
+                 Title="{Binding Title}"
+                 Height="400" Width="500"
+                 WindowStartupLocation="CenterOwner"
+                 ShowInTaskbar="False">
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <dxlc:LayoutControl Grid.Row="0">
+            <dxlc:LayoutGroup Orientation="Vertical">
+                <dxlc:LayoutItem Label="Category:">
+                    <dxe:ComboBoxEdit ItemsSource="{Binding Categories}"
+                                     EditValue="{Binding CategoryId}"
+                                     DisplayMember="CategoryName"
+                                     ValueMember="CategoryId"/>
+                </dxlc:LayoutItem>
+                
+                <dxlc:LayoutItem Label="Item Name:">
+                    <dxe:TextEdit Text="{Binding ItemName, UpdateSourceTrigger=PropertyChanged}" />
+                </dxlc:LayoutItem>
+                
+                <dxlc:LayoutItem Label="Price:">
+                    <dxe:SpinEdit Value="{Binding Price}" 
+                                  MinValue="0.01" 
+                                  MaxValue="999999"
+                                  Mask="c"
+                                  MaskUseAsDisplayFormat="True"
+                                  IsFloatValue="True"
+                                  Increment="1000"/>
+                </dxlc:LayoutItem>
+                
+                <dxlc:LayoutItem Label="Description:">
+                    <dxe:TextEdit Text="{Binding Description}" 
+                                 Height="60"
+                                 TextWrapping="Wrap"
+                                 AcceptsReturn="True"
+                                 VerticalContentAlignment="Top"/>
+                </dxlc:LayoutItem>
+                
+                <dxlc:LayoutItem Label="Available:">
+                    <CheckBox IsChecked="{Binding IsAvailable}" />
+                </dxlc:LayoutItem>
+            </dxlc:LayoutGroup>
+        </dxlc:LayoutControl>
+
+        <StackPanel Grid.Row="1" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right"
+                    Margin="0,20,0,0">
+            <dx:SimpleButton Content="Save" 
+                           IsDefault="True"
+                           Width="80" 
+                           Margin="0,0,10,0"
+                           Click="SaveButton_Click"/>
+            <dx:SimpleButton Content="Cancel" 
+                           IsCancel="True"
+                           Width="80"
+                           Click="CancelButton_Click"/>
+        </StackPanel>
+    </Grid>
+</dx:ThemedWindow>

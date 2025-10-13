@@ -1,23 +1,17 @@
 using System;
-using System.Collections.Generic;
 
-namespace RestaurantPOS.Core.Entities
+namespace RestaurantPOS.Core.DTOs
 {
-    public class MenuItem
+    public class MenuItemDto
     {
         public int MenuItemId { get; set; }
         public int CategoryId { get; set; }
+        public string CategoryName { get; set; } = string.Empty; // 조인을 통해 가져올 카테고리명
         public string ItemName { get; set; } = string.Empty;
         public decimal Price { get; set; }
         public string? Description { get; set; }
         public bool IsAvailable { get; set; } = true;
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
-        public bool IsDeleted { get; set; } = false;
-        public DateTime? DeletedAt { get; set; }
-
-        // Navigation properties
-        public virtual Category Category { get; set; } = null!;
-        public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     }
 }

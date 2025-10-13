@@ -1,6 +1,8 @@
 ﻿using DevExpress.Xpf.Core;
 using Prism.Commands;
+using Prism.Ioc;
 using Prism.Mvvm;
+using Prism.Regions;
 using System;
 using System.Windows.Threading;
 
@@ -20,6 +22,7 @@ namespace RestaurantPOS.WPF
 
     public class MainWindowViewModel : BindableBase
     {
+        private readonly IRegionManager _regionManager;
         private readonly DispatcherTimer _timer;
         private string _currentTime = string.Empty;
 
@@ -40,10 +43,20 @@ namespace RestaurantPOS.WPF
 
         public MainWindowViewModel()
         {
+            // Try to get IRegionManager from container
+            try
+            {
+                _regionManager = Prism.Ioc.ContainerLocator.Container.Resolve<IRegionManager>();
+            }
+            catch
+            {
+                // Design time or container not ready
+            }
+
             // Initialize commands
             ExitCommand = new DelegateCommand(() => System.Windows.Application.Current.Shutdown());
-            NavigateTableCommand = new DelegateCommand(() => { /* Navigation will be handled by modules */ });
-            NavigateMenuCommand = new DelegateCommand(() => { /* TODO: Navigate to menu module */ });
+            NavigateTableCommand = new DelegateCommand(NavigateToTable);
+            NavigateMenuCommand = new DelegateCommand(NavigateToMenu);
             NavigateEmployeeCommand = new DelegateCommand(() => { /* TODO: Navigate to employee module */ });
             DailySalesCommand = new DelegateCommand(() => { /* TODO: Show daily sales */ });
             MonthlySalesCommand = new DelegateCommand(() => { /* TODO: Show monthly sales */ });
@@ -56,6 +69,16 @@ namespace RestaurantPOS.WPF
             };
             _timer.Tick += (s, e) => CurrentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             _timer.Start();
+        }
+
+        private void NavigateToTable()
+        {
+            _regionManager?.RequestNavigate("MainRegion", "TableManagementView");
+        }
+
+        private void NavigateToMenu()
+        {
+            _regionManager?.RequestNavigate("MainRegion", "MenuManagementView");
         }
 
         private void ShowAbout()

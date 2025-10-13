@@ -1,0 +1,115 @@
+<UserControl x:Class="RestaurantPOS.WPF.Modules.MenuModule.Views.MenuManagementView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:dx="http://schemas.devexpress.com/winfx/2008/xaml/core"
+             xmlns:dxb="http://schemas.devexpress.com/winfx/2008/xaml/bars"
+             xmlns:dxg="http://schemas.devexpress.com/winfx/2008/xaml/grid"
+             xmlns:dxlc="http://schemas.devexpress.com/winfx/2008/xaml/layoutcontrol"
+             xmlns:dxe="http://schemas.devexpress.com/winfx/2008/xaml/editors"
+             xmlns:prism="http://prismlibrary.com/"
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             mc:Ignorable="d" 
+             d:DesignHeight="800" d:DesignWidth="1200">
+    
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Loading Overlay -->
+        <dx:WaitIndicator Grid.Row="1" Visibility="{Binding IsLoading, Converter={dx:BooleanToVisibilityConverter}}" />
+
+        <!-- Toolbar -->
+        <dxb:ToolBarControl Grid.Row="0" AllowCustomizationMenu="False">
+            <dxb:BarButtonItem Content="Add Category" Command="{Binding AddCategoryCommand}" 
+                              Glyph="{dx:DXImage Image=AddNewDataSource_16x16.png}" />
+            <dxb:BarButtonItem Content="Edit Category" Command="{Binding EditCategoryCommand}" 
+                              Glyph="{dx:DXImage Image=EditDataSource_16x16.png}" />
+            <dxb:BarButtonItem Content="Delete Category" Command="{Binding DeleteCategoryCommand}" 
+                              Glyph="{dx:DXImage Image=DeleteDataSource2_16x16.png}" />
+            <dxb:BarItemSeparator />
+            <dxb:BarButtonItem Content="Add Menu Item" Command="{Binding AddMenuItemCommand}" 
+                              Glyph="{dx:DXImage Image=Add_16x16.png}" />
+            <dxb:BarButtonItem Content="Edit Menu Item" Command="{Binding EditMenuItemCommand}" 
+                              Glyph="{dx:DXImage Image=Edit_16x16.png}" />
+            <dxb:BarButtonItem Content="Delete Menu Item" Command="{Binding DeleteMenuItemCommand}" 
+                              Glyph="{dx:DXImage Image=Delete_16x16.png}" />
+        </dxb:ToolBarControl>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="350"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Categories Panel -->
+            <dxlc:LayoutControl Grid.Column="0" Padding="10">
+                <dxlc:LayoutGroup Header="Categories" View="GroupBox">
+                    <dxg:GridControl ItemsSource="{Binding Categories}" 
+                                    SelectedItem="{Binding SelectedCategory}"
+                                    ShowBorder="False">
+                        <dxg:GridControl.View>
+                            <dxg:TableView ShowGroupPanel="False" 
+                                          AllowEditing="False"
+                                          ShowIndicator="False"
+                                          NavigationStyle="Row"
+                                          ShowVerticalLines="False"
+                                          ShowHorizontalLines="True"/>
+                        </dxg:GridControl.View>
+                        <dxg:GridColumn FieldName="CategoryName" Header="Name" Width="*"/>
+                        <dxg:GridColumn FieldName="DisplayOrder" Header="Order" Width="60" HorizontalHeaderContentAlignment="Center"/>
+                        <dxg:GridColumn FieldName="MenuItemCount" Header="Items" Width="60" HorizontalHeaderContentAlignment="Center"/>
+                        <dxg:GridColumn FieldName="IsActive" Header="Active" Width="60" HorizontalHeaderContentAlignment="Center">
+                            <dxg:GridColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding Value}" IsEnabled="False" HorizontalAlignment="Center"/>
+                                </DataTemplate>
+                            </dxg:GridColumn.CellTemplate>
+                        </dxg:GridColumn>
+                    </dxg:GridControl>
+                </dxlc:LayoutGroup>
+            </dxlc:LayoutControl>
+
+            <!-- Splitter -->
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" />
+
+            <!-- Menu Items Panel -->
+            <dxlc:LayoutControl Grid.Column="2" Padding="10">
+                <dxlc:LayoutGroup Header="Menu Items" View="GroupBox">
+                    <dxg:GridControl ItemsSource="{Binding MenuItems}" 
+                                    SelectedItem="{Binding SelectedMenuItem}"
+                                    ShowBorder="False">
+                        <dxg:GridControl.View>
+                            <dxg:TableView ShowGroupPanel="False" 
+                                          AllowEditing="False"
+                                          ShowIndicator="False"
+                                          NavigationStyle="Row"
+                                          ShowVerticalLines="False"
+                                          ShowHorizontalLines="True"/>
+                        </dxg:GridControl.View>
+                        <dxg:GridColumn FieldName="ItemName" Header="Name" Width="200"/>
+                        <dxg:GridColumn FieldName="Price" Header="Price" Width="100">
+                            <dxg:GridColumn.EditSettings>
+                                <dxe:TextEditSettings DisplayFormat="C" />
+                            </dxg:GridColumn.EditSettings>
+                        </dxg:GridColumn>
+                        <dxg:GridColumn FieldName="Description" Header="Description" Width="*"/>
+                        <dxg:GridColumn FieldName="IsAvailable" Header="Available" Width="80" HorizontalHeaderContentAlignment="Center">
+                            <dxg:GridColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding Value}" IsEnabled="False" HorizontalAlignment="Center"/>
+                                </DataTemplate>
+                            </dxg:GridColumn.CellTemplate>
+                        </dxg:GridColumn>
+                    </dxg:GridControl>
+                </dxlc:LayoutGroup>
+            </dxlc:LayoutControl>
+        </Grid>
+    </Grid>
+</UserControl>

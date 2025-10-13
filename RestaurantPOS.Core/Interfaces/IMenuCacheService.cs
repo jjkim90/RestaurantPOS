@@ -9,5 +9,6 @@ namespace RestaurantPOS.Core.Interfaces
         Task<IEnumerable<Category>> GetCategoriesAsync();
         Task<IEnumerable<MenuItem>> GetMenuItemsByCategoryAsync(int categoryId);
         void InvalidateCache();
+        void InvalidateCategoryCache(int categoryId);
     }
 }

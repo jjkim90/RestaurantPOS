@@ -279,6 +279,7 @@ namespace RestaurantPOS.Services
                 .Include(o => o.Table)
                 .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.MenuItem)
+                .IgnoreQueryFilters() // 삭제된 메뉴 정보도 포함하여 과거 주문 조회 가능
                 .FirstOrDefaultAsync(o => o.OrderId == orderId);
 
             return order != null ? _mapper.Map<OrderDTO>(order) : null;

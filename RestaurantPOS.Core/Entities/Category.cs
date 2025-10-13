@@ -10,6 +10,8 @@ namespace RestaurantPOS.Core.Entities
         public int DisplayOrder { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; }
+        public bool IsDeleted { get; set; } = false;
+        public DateTime? DeletedAt { get; set; }
 
         // Navigation property
         public virtual ICollection<MenuItem> MenuItems { get; set; } = new List<MenuItem>();

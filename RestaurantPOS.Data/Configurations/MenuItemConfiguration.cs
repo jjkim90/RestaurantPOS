@@ -43,6 +43,14 @@ namespace RestaurantPOS.Data.Configurations
 
             // Check constraints
             builder.HasCheckConstraint("CK_MenuItems_Price", "[Price] > 0");
+            
+            builder.Property(m => m.IsDeleted)
+                .HasDefaultValue(false);
+                
+            builder.HasIndex(m => m.IsDeleted);
+            
+            // Global query filter to exclude soft deleted records
+            builder.HasQueryFilter(m => !m.IsDeleted);
         }
     }
 }

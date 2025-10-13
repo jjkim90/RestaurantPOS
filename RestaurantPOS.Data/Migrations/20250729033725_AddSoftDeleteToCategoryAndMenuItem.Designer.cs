@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RestaurantPOS.Data.Context;
 
@@ -11,9 +12,11 @@ using RestaurantPOS.Data.Context;
 namespace RestaurantPOS.Data.Migrations
 {
     [DbContext(typeof(RestaurantContext))]
-    partial class RestaurantContextModelSnapshot : ModelSnapshot
+    [Migration("20250729033725_AddSoftDeleteToCategoryAndMenuItem")]
+    partial class AddSoftDeleteToCategoryAndMenuItem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -60,11 +63,10 @@ namespace RestaurantPOS.Data.Migrations
 
                     b.HasKey("CategoryId");
 
-                    b.HasIndex("IsDeleted");
+                    b.HasIndex("CategoryName")
+                        .IsUnique();
 
-                    b.HasIndex("CategoryName", "IsDeleted")
-                        .IsUnique()
-                        .HasFilter("[IsDeleted] = 0");
+                    b.HasIndex("IsDeleted");
 
                     b.HasIndex("DisplayOrder", "IsActive");
 
