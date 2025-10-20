@@ -301,7 +301,7 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
                 System.Windows.MessageBox.Show($"주문번호 {updatedOrder.OrderNumber}의 추가 주문이 주방으로 전송되었습니다.", "주문 확정", 
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
                     
-                // TODO: 프린터로 주문 전표 출력
+                // 주방 프린터 출력은 OrderService.ConfirmPendingItemsAsync에서 자동으로 처리됨
             }
             catch (Exception ex)
             {

@@ -38,17 +38,11 @@ namespace RestaurantPOS.Services
                             80 * 96 / 25.4,  // 80mm를 인치로 변환 후 DPI(96) 적용
                             297 * 96 / 25.4); // 297mm를 인치로 변환 후 DPI(96) 적용
 
-                        if (printDialog.ShowDialog() == true)
-                        {
-                            printDialog.PrintDocument(
-                                ((IDocumentPaginatorSource)document).DocumentPaginator,
-                                $"영수증 - {order.OrderNumber}");
-                            tcs.SetResult(true);
-                        }
-                        else
-                        {
-                            tcs.SetResult(false);
-                        }
+                        // 다이얼로그 없이 기본 프린터로 바로 출력
+                        printDialog.PrintDocument(
+                            ((IDocumentPaginatorSource)document).DocumentPaginator,
+                            $"영수증 - {order.OrderNumber}");
+                        tcs.SetResult(true);
                     }
                     catch (Exception ex)
                     {
