@@ -149,8 +149,23 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
             try
             {
                 var spaces = await _unitOfWork.SpaceRepository.GetAllAsync();
-                var tables = await _unitOfWork.TableRepository.GetAllAsync();
+                
+                // 모든 공간의 테이블 데이터를 백그라운드 스레드에서 미리 로드
+                var spaceTableData = new Dictionary<int, List<TableViewModel>>();
+                
+                foreach (var space in spaces)
+                {
+                    // TableService를 사용하여 주문 정보가 포함된 테이블 데이터 로드
+                    var tableDtos = await _tableService.GetTablesBySpaceAsync(space.SpaceId);
+                    var spaceTables = tableDtos
+                        .Select(dto => new TableViewModel(dto))
+                        .OrderBy(t => t.TableNumber)
+                        .ToList();
+                    
+                    spaceTableData[space.SpaceId] = spaceTables;
+                }
 
+                // UI 스레드에서 컬렉션 업데이트만 수행
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     // Clear existing
@@ -162,10 +177,7 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
 
                     foreach (var space in spaces)
                     {
-                        // IsDeleted가 false인 테이블만 필터링
-                        var spaceTables = tables.Where(t => t.SpaceId == space.SpaceId && !t.IsDeleted)
-                            .Select(t => new TableViewModel(t))
-                            .OrderBy(t => t.TableNumber);
+                        var spaceTables = spaceTableData[space.SpaceId];
 
                         if (space.IsSystem)
                         {
@@ -193,7 +205,7 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
                         else
                         {
                             // 사용자 정의 공간 (홀)
-                            var spaceVm = new SpaceViewModel(space, spaceTables.ToList());
+                            var spaceVm = new SpaceViewModel(space, spaceTables);
                             Spaces.Add(spaceVm);
                         }
                     }
@@ -546,10 +558,29 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
     public class TableViewModel : BindableBase
     {
         private readonly Core.Entities.Table _table;
+        private decimal _currentAmount;
+        private List<Core.DTOs.OrderDetailDto> _orderDetails = new List<Core.DTOs.OrderDetailDto>();
 
         public TableViewModel(Core.Entities.Table table)
         {
             _table = table;
+        }
+        
+        public TableViewModel(Core.DTOs.TableDto tableDto)
+        {
+            _table = new Core.Entities.Table
+            {
+                TableId = tableDto.TableId,
+                SpaceId = tableDto.SpaceId,
+                TableName = tableDto.TableName,
+                TableNumber = tableDto.TableNumber,
+                TableStatus = tableDto.TableStatus,
+                IsEditable = tableDto.IsEditable,
+                CreatedAt = tableDto.CreatedAt,
+                UpdatedAt = tableDto.UpdatedAt
+            };
+            _currentAmount = tableDto.CurrentOrderAmount;
+            _orderDetails = tableDto.CurrentOrderDetails ?? new List<Core.DTOs.OrderDetailDto>();
         }
 
         public int TableId => _table.TableId;
@@ -617,8 +648,56 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
             }
         }
 
-        public decimal CurrentAmount => 0; // TODO: Calculate from current orders
+        public decimal CurrentAmount => _currentAmount;
         public string AmountVisibility => _table.TableStatus == Core.Enums.TableStatus.Occupied ? "Visible" : "Collapsed";
+        public List<Core.DTOs.OrderDetailDto> OrderDetails => _orderDetails;
+        
+        // 표시할 메뉴 목록 (최대 5개)
+        public List<string> OrderDetailsList
+        {
+            get
+            {
+                if (_orderDetails == null || !_orderDetails.Any())
+                    return new List<string>();
+                
+                return _orderDetails
+                    .Take(5)
+                    .Select(d => $"{d.MenuItemName} x{d.Quantity}")
+                    .ToList();
+            }
+        }
+        
+        // 5개를 초과하는 메뉴가 있는지
+        public bool HasMoreItems => _orderDetails != null && _orderDetails.Count > 5;
+        
+        // 추가 메뉴 개수
+        public int MoreItemsCount => _orderDetails != null && _orderDetails.Count > 5 ? _orderDetails.Count - 5 : 0;
+        
+        // 추가 메뉴 표시 텍스트
+        public string MoreItemsText => HasMoreItems ? $"... 외 {MoreItemsCount}개 더" : "";
+        
+        // 주문 요약 정보를 표시하기 위한 프로퍼티 (구버전 호환용)
+        public string OrderSummary 
+        { 
+            get
+            {
+                if (_orderDetails == null || !_orderDetails.Any())
+                    return "";
+                    
+                var totalItems = _orderDetails.Sum(x => x.Quantity);
+                var itemTypes = _orderDetails.Count;
+                
+                if (itemTypes == 1)
+                {
+                    var item = _orderDetails.First();
+                    return $"{item.MenuItemName} x{item.Quantity}";
+                }
+                else
+                {
+                    return $"{_orderDetails.First().MenuItemName} 외 {itemTypes - 1}종 (총 {totalItems}개)";
+                }
+            }
+        }
     }
 
     // Waiting list ViewModel

@@ -17,7 +17,7 @@
         <!-- Table Tile Style -->
         <Style x:Key="TableTileStyle" TargetType="dxlc:Tile">
             <Setter Property="Width" Value="260"/>
-            <Setter Property="Height" Value="180"/>
+            <Setter Property="Height" Value="280"/>
             <Setter Property="Margin" Value="10"/>
             <Setter Property="Size" Value="Small"/>
         </Style>
@@ -29,6 +29,7 @@
                     CornerRadius="8">
                 <Grid>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
@@ -46,8 +47,8 @@
                                    Foreground="White"/>
                     </Border>
                     
-                    <!-- Content -->
-                    <Grid Grid.Row="1" Background="White">
+                    <!-- Status -->
+                    <Grid Grid.Row="1" Background="White" Height="30">
                         <TextBlock Text="{Binding StatusText}" 
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
@@ -55,16 +56,55 @@
                                    Foreground="Black"/>
                     </Grid>
                     
-                    <!-- Footer -->
-                    <Grid Grid.Row="2" Background="White" Height="30">
-                        <TextBlock Text="{Binding CurrentAmount, StringFormat='₩{0:N0}'}" 
+                    <!-- Order Details List or Empty Space -->
+                    <Grid Grid.Row="2" Background="White">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="10,5"
+                                      Visibility="{Binding AmountVisibility}"
+                                      IsHitTestVisible="False">
+                            <StackPanel>
+                                <!-- 메뉴 목록 -->
+                                <ItemsControl ItemsSource="{Binding OrderDetailsList}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" 
+                                                       FontSize="12"
+                                                       Foreground="DarkSlateGray"
+                                                       Margin="0,2"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                
+                                <!-- 추가 메뉴 표시 -->
+                                <TextBlock Text="{Binding MoreItemsText}" 
+                                           FontSize="12"
+                                           Foreground="Gray"
+                                           FontStyle="Italic"
+                                           Margin="0,2"
+                                           Visibility="{Binding HasMoreItems, Converter={dx:BooleanToVisibilityConverter}}"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                    
+                    <!-- Footer - Total Amount or Empty -->
+                    <Border Grid.Row="3" Height="35">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="White"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding AmountVisibility}" Value="Visible">
+                                        <Setter Property="Background" Value="#F5F5F5"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="{Binding CurrentAmount, StringFormat='합계: ₩{0:N0}'}" 
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
-                                   FontSize="14"
+                                   FontSize="16"
                                    FontWeight="Bold"
                                    Foreground="Black"
                                    Visibility="{Binding AmountVisibility}"/>
-                    </Grid>
+                    </Border>
                 </Grid>
             </Border>
         </DataTemplate>

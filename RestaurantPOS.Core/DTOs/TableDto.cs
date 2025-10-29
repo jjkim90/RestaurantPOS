@@ -1,5 +1,6 @@
 using RestaurantPOS.Core.Enums;
 using System;
+using System.Collections.Generic;
 
 namespace RestaurantPOS.Core.DTOs
 {
@@ -19,6 +20,18 @@ namespace RestaurantPOS.Core.DTOs
         public decimal CurrentOrderAmount { get; set; }
         public int? CurrentOrderId { get; set; }
         public DateTime? OccupiedSince { get; set; }
+        
+        // 주문 상세 정보 (메뉴 미리보기용)
+        public List<OrderDetailDto> CurrentOrderDetails { get; set; } = new List<OrderDetailDto>();
+    }
+    
+    // 간단한 주문 상세 정보 DTO (미리보기용)
+    public class OrderDetailDto
+    {
+        public string MenuItemName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal SubTotal { get; set; }
     }
 
     public class CreateTableDto

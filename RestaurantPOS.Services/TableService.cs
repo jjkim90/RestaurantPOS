@@ -160,17 +160,30 @@ namespace RestaurantPOS.Services
                 // 현재 주문 정보 조회
                 if (table.TableStatus == TableStatus.Occupied)
                 {
-                    var activeOrder = await _unitOfWork.OrderRepository
-                        .FindAsync(o => o.TableId == table.TableId && 
+                    var activeOrder = await _unitOfWork.OrderRepository.Query()
+                        .Include(o => o.OrderDetails)
+                        .ThenInclude(od => od.MenuItem)
+                        .Where(o => o.TableId == table.TableId && 
                                  (o.Status == "Pending" || 
-                                  o.Status == "InProgress"));
+                                  o.Status == "InProgress"))
+                        .FirstOrDefaultAsync();
                     
-                    var currentOrder = activeOrder.FirstOrDefault();
-                    if (currentOrder != null)
+                    if (activeOrder != null)
                     {
-                        tableDto.CurrentOrderId = currentOrder.OrderId;
-                        tableDto.CurrentOrderAmount = currentOrder.TotalAmount;
-                        tableDto.OccupiedSince = currentOrder.OrderDate;
+                        tableDto.CurrentOrderId = activeOrder.OrderId;
+                        tableDto.CurrentOrderAmount = activeOrder.TotalAmount;
+                        tableDto.OccupiedSince = activeOrder.OrderDate;
+                        
+                        // 주문 상세 정보 추가 (메뉴 미리보기용)
+                        tableDto.CurrentOrderDetails = activeOrder.OrderDetails
+                            .Select(od => new Core.DTOs.OrderDetailDto
+                            {
+                                MenuItemName = od.MenuItem?.ItemName ?? "삭제된 메뉴",
+                                Quantity = od.Quantity,
+                                UnitPrice = od.UnitPrice,
+                                SubTotal = od.SubTotal
+                            })
+                            .ToList();
                     }
                 }
                 
