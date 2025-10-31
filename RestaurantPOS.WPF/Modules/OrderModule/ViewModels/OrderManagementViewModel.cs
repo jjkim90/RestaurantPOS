@@ -26,6 +26,7 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         
         private int _currentTableId;
         private int _currentOrderId;
+        private int _currentSpaceId;
         private string _tableDisplayName;
         private ObservableCollection<CategoryViewModel> _categories;
         private ObservableCollection<MenuItemViewModel> _menuItems;
@@ -138,7 +139,11 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         #region Command Handlers
         private void OnBackToTable()
         {
-            _regionManager.RequestNavigate("MainRegion", "TableManagementView");
+            var parameters = new NavigationParameters
+            {
+                { "spaceId", _currentSpaceId }
+            };
+            _regionManager.RequestNavigate("MainRegion", "TableManagementView", parameters);
         }
 
         private async Task OnCategoryClickAsync(CategoryViewModel category)
@@ -402,7 +407,11 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
                     }
                     
                     // 테이블 화면으로 돌아가기
-                    _regionManager.RequestNavigate("MainRegion", "TableManagementView");
+                    var parameters = new NavigationParameters
+                    {
+                        { "spaceId", _currentSpaceId }
+                    };
+                    _regionManager.RequestNavigate("MainRegion", "TableManagementView", parameters);
                 }
             }
             catch (Exception ex)
@@ -561,6 +570,10 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
             if (navigationContext.Parameters.ContainsKey("tableId"))
             {
                 _currentTableId = navigationContext.Parameters.GetValue<int>("tableId");
+                if (navigationContext.Parameters.ContainsKey("spaceId"))
+                {
+                    _currentSpaceId = navigationContext.Parameters.GetValue<int>("spaceId");
+                }
                 LoadTableInfoAsync();
             }
         }
@@ -594,6 +607,11 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
                 if (table != null)
                 {
                     TableDisplayName = table.TableName;
+                    // spaceId가 설정되지 않은 경우 테이블에서 가져오기
+                    if (_currentSpaceId == 0)
+                    {
+                        _currentSpaceId = table.SpaceId;
+                    }
                 }
             }
             finally

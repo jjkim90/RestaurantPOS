@@ -19,8 +19,9 @@ namespace RestaurantPOS.Data.Configurations
                 .IsRequired()
                 .HasMaxLength(50);
 
-            builder.HasIndex(s => s.SpaceName)
-                .IsUnique();
+            builder.HasIndex(s => new { s.SpaceName, s.IsDeleted })
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
 
             builder.Property(s => s.IsSystem)
                 .HasDefaultValue(false);
@@ -30,6 +31,16 @@ namespace RestaurantPOS.Data.Configurations
 
             builder.Property(s => s.CreatedAt)
                 .HasDefaultValueSql("SYSDATETIME()");
+
+            // Soft delete configuration
+            builder.Property(s => s.IsDeleted)
+                .HasDefaultValue(false);
+
+            builder.Property(s => s.DeletedAt)
+                .IsRequired(false);
+
+            // Global query filter for soft delete
+            builder.HasQueryFilter(s => !s.IsDeleted);
         }
     }
 }

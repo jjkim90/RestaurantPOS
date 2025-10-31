@@ -1,4 +1,5 @@
 using DevExpress.Xpf.Core;
+using Microsoft.EntityFrameworkCore;
 using RestaurantPOS.Core.Interfaces;
 using RestaurantPOS.WPF.Modules.TableModule.ViewModels;
 using System;
@@ -61,6 +62,17 @@ namespace RestaurantPOS.WPF.Modules.TableModule.Services
         {
             try
             {
+                // 먼저 테이블이 존재하는지 확인 (tracking 비활성화)
+                var exists = await _unitOfWork.TableRepository.Query()
+                    .AsNoTracking()
+                    .AnyAsync(t => t.TableId == tableId);
+                    
+                if (!exists)
+                {
+                    throw new InvalidOperationException($"Table with ID {tableId} not found.");
+                }
+                
+                // 업데이트를 위해 테이블 조회 (tracking 활성화)
                 var table = await _unitOfWork.TableRepository.GetByIdAsync(tableId);
                 if (table != null)
                 {
@@ -69,6 +81,9 @@ namespace RestaurantPOS.WPF.Modules.TableModule.Services
                     
                     _unitOfWork.TableRepository.Update(table);
                     await _unitOfWork.SaveChangesAsync();
+                    
+                    // ChangeTracker 정리
+                    _unitOfWork.ClearChangeTracker();
                 }
             }
             catch (Exception ex)

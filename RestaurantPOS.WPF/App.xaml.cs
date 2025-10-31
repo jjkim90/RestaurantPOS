@@ -19,6 +19,7 @@ using RestaurantPOS.WPF.Infrastructure;
 using RestaurantPOS.WPF.Modules.TableModule;
 using RestaurantPOS.WPF.Modules.OrderModule;
 using RestaurantPOS.WPF.Modules.MenuModule;
+using RestaurantPOS.WPF.Modules.SettingsModule;
 using RestaurantPOS.WPF.Views;
 using Serilog;
 using System;
@@ -45,6 +46,7 @@ namespace RestaurantPOS.WPF
             moduleCatalog.AddModule<TableModule>();
             moduleCatalog.AddModule<OrderModule>();
             moduleCatalog.AddModule<MenuModule>();
+            moduleCatalog.AddModule<SettingsModule>();
         }
 
         protected override void RegisterTypes(IContainerRegistry containerRegistry)

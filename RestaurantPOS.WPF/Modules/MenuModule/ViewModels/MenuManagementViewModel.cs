@@ -133,7 +133,7 @@ namespace RestaurantPOS.WPF.Modules.MenuModule.ViewModels
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error loading categories");
-                DXMessageBox.Show("Failed to load categories", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                DXMessageBox.Show($"Failed to load categories: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -162,7 +162,7 @@ namespace RestaurantPOS.WPF.Modules.MenuModule.ViewModels
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error loading menu items for category: {CategoryName}", SelectedCategory.CategoryName);
-                DXMessageBox.Show("Failed to load menu items", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                DXMessageBox.Show($"Failed to load menu items: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -185,7 +185,7 @@ namespace RestaurantPOS.WPF.Modules.MenuModule.ViewModels
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error adding category");
-                DXMessageBox.Show("Failed to add category", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                DXMessageBox.Show($"Failed to add category: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -207,7 +207,7 @@ namespace RestaurantPOS.WPF.Modules.MenuModule.ViewModels
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error editing category");
-                DXMessageBox.Show("Failed to edit category", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                DXMessageBox.Show($"Failed to edit category: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -232,7 +232,7 @@ namespace RestaurantPOS.WPF.Modules.MenuModule.ViewModels
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error deleting category");
-                DXMessageBox.Show("Failed to delete category", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                DXMessageBox.Show($"Failed to delete category: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -256,7 +256,7 @@ namespace RestaurantPOS.WPF.Modules.MenuModule.ViewModels
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error adding menu item");
-                DXMessageBox.Show("Failed to add menu item", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                DXMessageBox.Show($"Failed to add menu item: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -278,7 +278,7 @@ namespace RestaurantPOS.WPF.Modules.MenuModule.ViewModels
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error editing menu item");
-                DXMessageBox.Show("Failed to edit menu item", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                DXMessageBox.Show($"Failed to edit menu item: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -305,7 +305,7 @@ namespace RestaurantPOS.WPF.Modules.MenuModule.ViewModels
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error deleting menu item");
-                DXMessageBox.Show("Failed to delete menu item", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                DXMessageBox.Show($"Failed to delete menu item: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

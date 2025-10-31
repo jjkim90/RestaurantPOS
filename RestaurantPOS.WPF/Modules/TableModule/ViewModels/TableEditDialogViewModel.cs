@@ -47,6 +47,13 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
             set { SetProperty(ref _isStatusEditable, value); }
         }
 
+        private bool _isTableNumberEditable = true;
+        public bool IsTableNumberEditable
+        {
+            get { return _isTableNumberEditable; }
+            set { SetProperty(ref _isTableNumberEditable, value); }
+        }
+
         private TableStatusItem _selectedTableStatus;
         public TableStatusItem SelectedTableStatus
         {
@@ -94,7 +101,8 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
             TableName = string.Empty;
             TableNumber = nextTableNumber;
             SelectedTableStatus = TableStatuses.First(s => s.Value == TableStatus.Available);
-            IsStatusEditable = true;
+            IsStatusEditable = false;  // 추가 시에는 상태 선택 불가 (항상 사용 가능)
+            IsTableNumberEditable = true;  // 테이블 번호는 수정 가능
             _originalTableId = 0;
             _originalTableName = string.Empty;
         }
@@ -114,6 +122,7 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
             
             // 사용 중인 테이블은 상태 변경 불가
             IsStatusEditable = status != TableStatus.Occupied;
+            IsTableNumberEditable = true;  // 수정 시에도 테이블 번호 변경 가능
             
             _originalTableId = table.TableId;
             _originalTableName = table.DisplayName;

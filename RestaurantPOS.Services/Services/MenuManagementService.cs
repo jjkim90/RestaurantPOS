@@ -75,8 +75,8 @@ namespace RestaurantPOS.Services.Services
                 var category = _mapper.Map<Category>(categoryDto);
                 category.CreatedAt = DateTime.Now;
 
-                // DisplayOrder 자동 설정 (기존 최대값 + 1)
-                if (category.DisplayOrder == 0)
+                // DisplayOrder가 지정되지 않은 경우에만 자동 설정
+                if (categoryDto.DisplayOrder == 0)
                 {
                     var maxOrder = await _unitOfWork.CategoryRepository.Query()
                         .MaxAsync(c => (int?)c.DisplayOrder) ?? 0;

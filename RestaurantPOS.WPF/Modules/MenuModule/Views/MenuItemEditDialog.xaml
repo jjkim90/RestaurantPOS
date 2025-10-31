@@ -5,7 +5,7 @@
                  xmlns:dxlc="http://schemas.devexpress.com/winfx/2008/xaml/layoutcontrol"
                  xmlns:dxe="http://schemas.devexpress.com/winfx/2008/xaml/editors"
                  Title="{Binding Title}"
-                 Height="400" Width="500"
+                 Height="500" Width="600"
                  WindowStartupLocation="CenterOwner"
                  ShowInTaskbar="False">
     
@@ -29,12 +29,12 @@
                 </dxlc:LayoutItem>
                 
                 <dxlc:LayoutItem Label="Price:">
-                    <dxe:SpinEdit Value="{Binding Price}" 
-                                  MinValue="0.01" 
+                    <dxe:SpinEdit Value="{Binding Price, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                  MinValue="0" 
                                   MaxValue="999999"
-                                  Mask="c"
+                                  Mask="n0"
                                   MaskUseAsDisplayFormat="True"
-                                  IsFloatValue="True"
+                                  IsFloatValue="False"
                                   Increment="1000"/>
                 </dxlc:LayoutItem>
                 
@@ -56,14 +56,18 @@
                     Orientation="Horizontal" 
                     HorizontalAlignment="Right"
                     Margin="0,20,0,0">
-            <dx:SimpleButton Content="Save" 
+            <dx:SimpleButton Content="저장" 
                            IsDefault="True"
-                           Width="80" 
+                           Width="120" 
+                           Height="50"
+                           FontSize="16"
                            Margin="0,0,10,0"
                            Click="SaveButton_Click"/>
-            <dx:SimpleButton Content="Cancel" 
+            <dx:SimpleButton Content="취소" 
                            IsCancel="True"
-                           Width="80"
+                           Width="120"
+                           Height="50"
+                           FontSize="16"
                            Click="CancelButton_Click"/>
         </StackPanel>
     </Grid>

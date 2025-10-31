@@ -10,6 +10,10 @@ namespace RestaurantPOS.Core.Entities
         public bool IsSystem { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; }
+        
+        // Soft delete fields
+        public bool IsDeleted { get; set; } = false;
+        public DateTime? DeletedAt { get; set; }
 
         // Navigation property
         public virtual ICollection<Table> Tables { get; set; } = new List<Table>();

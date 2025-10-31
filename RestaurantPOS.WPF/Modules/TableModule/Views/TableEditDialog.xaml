@@ -33,10 +33,11 @@
         <!-- 테이블 번호 -->
         <Label Grid.Row="2" Content="테이블 번호:" Margin="0,0,0,5"/>
         <dxe:SpinEdit Grid.Row="3" 
-                      Value="{Binding TableNumber}"
+                      Value="{Binding TableNumber, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                       MinValue="1"
                       MaxValue="999"
                       IsFloatValue="False"
+                      IsEnabled="{Binding IsTableNumberEditable}"
                       Margin="0,0,0,10"/>
         
         <!-- 테이블 상태 -->

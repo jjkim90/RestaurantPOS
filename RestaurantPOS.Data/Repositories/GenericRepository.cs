@@ -25,6 +25,19 @@ namespace RestaurantPOS.Data.Repositories
             return await _dbSet.FindAsync(id);
         }
 
+        public virtual async Task<T?> GetByIdAsync(int id, bool tracking)
+        {
+            if (!tracking)
+            {
+                var keyName = _context.Model.FindEntityType(typeof(T))?.FindPrimaryKey()?.Properties[0].Name;
+                if (keyName != null)
+                {
+                    return await _dbSet.AsNoTracking().FirstOrDefaultAsync(e => EF.Property<int>(e, keyName) == id);
+                }
+            }
+            return await _dbSet.FindAsync(id);
+        }
+
         public virtual async Task<IEnumerable<T>> GetAllAsync()
         {
             return await _dbSet.ToListAsync();
@@ -38,6 +51,11 @@ namespace RestaurantPOS.Data.Repositories
         public virtual IQueryable<T> Query()
         {
             return _dbSet.AsQueryable();
+        }
+
+        public virtual IQueryable<T> QueryAsNoTracking()
+        {
+            return _dbSet.AsNoTracking();
         }
 
         public virtual async Task<T> AddAsync(T entity)

@@ -18,5 +18,6 @@ namespace RestaurantPOS.Core.Interfaces
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();
         Task RollbackTransactionAsync();
+        void ClearChangeTracker();
     }
 }

@@ -5,7 +5,7 @@
                  xmlns:dxlc="http://schemas.devexpress.com/winfx/2008/xaml/layoutcontrol"
                  xmlns:dxe="http://schemas.devexpress.com/winfx/2008/xaml/editors"
                  Title="{Binding Title}"
-                 Height="300" Width="400"
+                 Height="400" Width="500"
                  WindowStartupLocation="CenterOwner"
                  ShowInTaskbar="False">
     
@@ -22,10 +22,11 @@
                 </dxlc:LayoutItem>
                 
                 <dxlc:LayoutItem Label="Display Order:">
-                    <dxe:SpinEdit Value="{Binding DisplayOrder}" 
+                    <dxe:SpinEdit Value="{Binding DisplayOrder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                   MinValue="1" 
                                   MaxValue="100" 
-                                  IsFloatValue="False"/>
+                                  IsFloatValue="False"
+                                  Increment="1"/>
                 </dxlc:LayoutItem>
                 
                 <dxlc:LayoutItem Label="Active:">
@@ -38,14 +39,18 @@
                     Orientation="Horizontal" 
                     HorizontalAlignment="Right"
                     Margin="0,20,0,0">
-            <dx:SimpleButton Content="Save" 
+            <dx:SimpleButton Content="저장" 
                            IsDefault="True"
-                           Width="80" 
+                           Width="120" 
+                           Height="50"
+                           FontSize="16"
                            Margin="0,0,10,0"
                            Click="SaveButton_Click"/>
-            <dx:SimpleButton Content="Cancel" 
+            <dx:SimpleButton Content="취소" 
                            IsCancel="True"
-                           Width="80"
+                           Width="120"
+                           Height="50"
+                           FontSize="16"
                            Click="CancelButton_Click"/>
         </StackPanel>
     </Grid>

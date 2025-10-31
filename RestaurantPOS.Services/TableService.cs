@@ -26,14 +26,18 @@ namespace RestaurantPOS.Services
 
         public async Task<IEnumerable<SpaceDto>> GetAllSpacesAsync()
         {
-            var spaces = await _unitOfWork.SpaceRepository.GetAllAsync();
+            var spaces = await _unitOfWork.SpaceRepository.Query()
+                .AsNoTracking()
+                .ToListAsync();
             var spaceDtos = new List<SpaceDto>();
 
             foreach (var space in spaces)
             {
                 var spaceDto = _mapper.Map<SpaceDto>(space);
-                var tables = await _unitOfWork.TableRepository
-                    .FindAsync(t => t.SpaceId == space.SpaceId);
+                var tables = await _unitOfWork.TableRepository.Query()
+                    .AsNoTracking()
+                    .Where(t => t.SpaceId == space.SpaceId)
+                    .ToListAsync();
                 spaceDto.TableCount = tables.Count();
                 spaceDto.Tables = _mapper.Map<List<TableDto>>(tables);
                 spaceDtos.Add(spaceDto);
@@ -44,13 +48,17 @@ namespace RestaurantPOS.Services
 
         public async Task<SpaceDto> GetSpaceByIdAsync(int spaceId)
         {
-            var space = await _unitOfWork.SpaceRepository.GetByIdAsync(spaceId);
+            var space = await _unitOfWork.SpaceRepository.Query()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.SpaceId == spaceId);
             if (space == null)
                 throw new InvalidOperationException($"Space with ID {spaceId} not found.");
 
             var spaceDto = _mapper.Map<SpaceDto>(space);
-            var tables = await _unitOfWork.TableRepository
-                .FindAsync(t => t.SpaceId == spaceId);
+            var tables = await _unitOfWork.TableRepository.Query()
+                .AsNoTracking()
+                .Where(t => t.SpaceId == spaceId)
+                .ToListAsync();
             spaceDto.Tables = _mapper.Map<List<TableDto>>(tables);
             spaceDto.TableCount = tables.Count();
 
@@ -80,67 +88,97 @@ namespace RestaurantPOS.Services
 
         public async Task<SpaceDto> UpdateSpaceAsync(int spaceId, UpdateSpaceDto updateSpaceDto)
         {
-            var space = await _unitOfWork.SpaceRepository.GetByIdAsync(spaceId);
-            if (space == null)
-                throw new InvalidOperationException($"Space with ID {spaceId} not found.");
+            try
+            {
+                // 먼저 ChangeTracker를 정리
+                _unitOfWork.ClearChangeTracker();
+                
+                // AsNoTracking 없이 새로 조회하여 tracking 활성화
+                var space = await _unitOfWork.SpaceRepository.Query()
+                    .FirstOrDefaultAsync(s => s.SpaceId == spaceId);
+                if (space == null)
+                    throw new InvalidOperationException($"Space with ID {spaceId} not found.");
 
-            if (space.IsSystem)
-                throw new InvalidOperationException("System spaces cannot be modified.");
+                if (space.IsSystem)
+                    throw new InvalidOperationException("System spaces cannot be modified.");
 
-            // 이름 중복 체크
-            var isUnique = await IsSpaceNameUniqueAsync(updateSpaceDto.SpaceName, spaceId);
-            if (!isUnique)
-                throw new InvalidOperationException($"Space name '{updateSpaceDto.SpaceName}' already exists.");
+                // 이름 중복 체크
+                var isUnique = await IsSpaceNameUniqueAsync(updateSpaceDto.SpaceName, spaceId);
+                if (!isUnique)
+                    throw new InvalidOperationException($"Space name '{updateSpaceDto.SpaceName}' already exists.");
 
-            space.SpaceName = updateSpaceDto.SpaceName;
-            space.IsActive = updateSpaceDto.IsActive;
-            // ModifiedAt 속성이 없으므로 주석 처리
-            // space.ModifiedAt = DateTime.Now;
+                space.SpaceName = updateSpaceDto.SpaceName;
+                space.IsActive = updateSpaceDto.IsActive;
+                // ModifiedAt 속성이 없으므로 주석 처리
+                // space.ModifiedAt = DateTime.Now;
 
-            _unitOfWork.SpaceRepository.Update(space);
-            await _unitOfWork.SaveChangesAsync();
+                _unitOfWork.SpaceRepository.Update(space);
+                await _unitOfWork.SaveChangesAsync();
 
-            return await GetSpaceByIdAsync(spaceId);
+                return await GetSpaceByIdAsync(spaceId);
+            }
+            catch (Exception ex)
+            {
+                // 오류 발생 시 ChangeTracker 정리
+                _unitOfWork.ClearChangeTracker();
+                throw;
+            }
         }
 
         public async Task<bool> DeleteSpaceAsync(int spaceId)
         {
-            var space = await _unitOfWork.SpaceRepository.GetByIdAsync(spaceId);
-            if (space == null)
-                return false;
+            try
+            {
+                // 먼저 ChangeTracker를 정리
+                _unitOfWork.ClearChangeTracker();
+                
+                // AsNoTracking 없이 새로 조회하여 tracking 활성화
+                var space = await _unitOfWork.SpaceRepository.Query()
+                    .FirstOrDefaultAsync(s => s.SpaceId == spaceId);
+                if (space == null || space.IsDeleted)
+                    return false;
 
-            if (space.IsSystem)
-                throw new InvalidOperationException("System spaces cannot be deleted.");
+                if (space.IsSystem)
+                    throw new InvalidOperationException("System spaces cannot be deleted.");
 
-            var canDelete = await CanDeleteSpaceAsync(spaceId);
-            if (!canDelete)
-                throw new InvalidOperationException("Cannot delete space with existing tables or orders.");
+                // 홀에 속한 활성 테이블들도 함께 soft delete
+                var tables = await _unitOfWork.TableRepository.Query()
+                    .Where(t => t.SpaceId == spaceId && !t.IsDeleted)
+                    .ToListAsync();
+                
+                foreach (var table in tables)
+                {
+                    table.IsDeleted = true;
+                    table.DeletedAt = DateTime.Now;
+                    table.UpdatedAt = DateTime.Now;
+                    _unitOfWork.TableRepository.Update(table);
+                }
 
-            _unitOfWork.SpaceRepository.Remove(space);
-            await _unitOfWork.SaveChangesAsync();
+                // 홀 soft delete 처리
+                space.IsDeleted = true;
+                space.DeletedAt = DateTime.Now;
+                
+                _unitOfWork.SpaceRepository.Update(space);
+                await _unitOfWork.SaveChangesAsync();
 
-            return true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // 오류 발생 시 ChangeTracker 정리
+                _unitOfWork.ClearChangeTracker();
+                throw;
+            }
         }
 
         public async Task<bool> CanDeleteSpaceAsync(int spaceId)
         {
-            // 삭제되지 않은 테이블이 있는지 확인
-            var tables = await _unitOfWork.TableRepository
-                .FindAsync(t => t.SpaceId == spaceId && !t.IsDeleted);
-            
-            if (tables.Any())
-            {
-                // 진행 중인 주문이 있는지 확인
-                var tableIds = tables.Select(t => t.TableId).ToList();
-                var activeOrders = await _unitOfWork.OrderRepository
-                    .FindAsync(o => tableIds.Contains(o.TableId) && 
-                             (o.Status == "Pending" || 
-                              o.Status == "InProgress"));
+            // 시스템 공간 체크만 수행 (테이블 존재 여부는 체크하지 않음)
+            var space = await _unitOfWork.SpaceRepository.Query()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.SpaceId == spaceId);
                 
-                return !activeOrders.Any();
-            }
-
-            return true;
+            return space != null && !space.IsSystem && !space.IsDeleted;
         }
 
         #endregion
@@ -149,11 +187,14 @@ namespace RestaurantPOS.Services
 
         public async Task<IEnumerable<TableDto>> GetTablesBySpaceAsync(int spaceId)
         {
-            var tables = await _unitOfWork.TableRepository
-                .FindAsync(t => t.SpaceId == spaceId && !t.IsDeleted);
+            var tables = await _unitOfWork.TableRepository.Query()
+                .AsNoTracking()
+                .Where(t => t.SpaceId == spaceId && !t.IsDeleted)
+                .OrderBy(t => t.TableNumber)
+                .ToListAsync();
             
             var tableDtos = new List<TableDto>();
-            foreach (var table in tables.OrderBy(t => t.TableNumber))
+            foreach (var table in tables)
             {
                 var tableDto = _mapper.Map<TableDto>(table);
                 
@@ -161,6 +202,7 @@ namespace RestaurantPOS.Services
                 if (table.TableStatus == TableStatus.Occupied)
                 {
                     var activeOrder = await _unitOfWork.OrderRepository.Query()
+                        .AsNoTracking()
                         .Include(o => o.OrderDetails)
                         .ThenInclude(od => od.MenuItem)
                         .Where(o => o.TableId == table.TableId && 
@@ -195,14 +237,18 @@ namespace RestaurantPOS.Services
 
         public async Task<TableDto> GetTableByIdAsync(int tableId)
         {
-            var table = await _unitOfWork.TableRepository.GetByIdAsync(tableId);
+            var table = await _unitOfWork.TableRepository.Query()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.TableId == tableId);
             if (table == null)
                 throw new InvalidOperationException($"Table with ID {tableId} not found.");
 
             var tableDto = _mapper.Map<TableDto>(table);
             
             // Space 정보 추가
-            var space = await _unitOfWork.SpaceRepository.GetByIdAsync(table.SpaceId);
+            var space = await _unitOfWork.SpaceRepository.Query()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.SpaceId == table.SpaceId);
             if (space != null)
                 tableDto.SpaceName = space.SpaceName;
 
@@ -223,6 +269,16 @@ namespace RestaurantPOS.Services
                 throw new InvalidOperationException(
                     $"Table name '{createTableDto.TableName}' already exists in this space.");
 
+            // 테이블 번호 중복 체크
+            var existingTable = await _unitOfWork.TableRepository.Query()
+                .AsNoTracking()
+                .AnyAsync(t => t.SpaceId == createTableDto.SpaceId && 
+                              t.TableNumber == createTableDto.TableNumber && 
+                              !t.IsDeleted);
+            if (existingTable)
+                throw new InvalidOperationException(
+                    $"Table number '{createTableDto.TableNumber}' already exists in this space.");
+
             var table = new Table
             {
                 SpaceId = createTableDto.SpaceId,
@@ -241,7 +297,12 @@ namespace RestaurantPOS.Services
 
         public async Task<TableDto> UpdateTableAsync(int tableId, UpdateTableDto updateTableDto)
         {
-            var table = await _unitOfWork.TableRepository.GetByIdAsync(tableId);
+            // 먼저 ChangeTracker를 정리
+            _unitOfWork.ClearChangeTracker();
+            
+            // AsNoTracking 없이 새로 조회하여 tracking 활성화
+            var table = await _unitOfWork.TableRepository.Query()
+                .FirstOrDefaultAsync(t => t.TableId == tableId);
             if (table == null)
                 throw new InvalidOperationException($"Table with ID {tableId} not found.");
 
@@ -254,6 +315,20 @@ namespace RestaurantPOS.Services
             if (!isUnique)
                 throw new InvalidOperationException(
                     $"Table name '{updateTableDto.TableName}' already exists in this space.");
+
+            // 테이블 번호가 변경된 경우 중복 체크
+            if (table.TableNumber != updateTableDto.TableNumber)
+            {
+                var existingTable = await _unitOfWork.TableRepository.Query()
+                    .AsNoTracking()
+                    .AnyAsync(t => t.SpaceId == table.SpaceId && 
+                                  t.TableNumber == updateTableDto.TableNumber && 
+                                  t.TableId != tableId &&
+                                  !t.IsDeleted);
+                if (existingTable)
+                    throw new InvalidOperationException(
+                        $"Table number '{updateTableDto.TableNumber}' already exists in this space.");
+            }
 
             table.TableName = updateTableDto.TableName;
             table.TableNumber = updateTableDto.TableNumber;
@@ -268,7 +343,12 @@ namespace RestaurantPOS.Services
 
         public async Task<bool> DeleteTableAsync(int tableId)
         {
-            var table = await _unitOfWork.TableRepository.GetByIdAsync(tableId);
+            // 먼저 ChangeTracker를 정리
+            _unitOfWork.ClearChangeTracker();
+            
+            // AsNoTracking 없이 새로 조회하여 tracking 활성화
+            var table = await _unitOfWork.TableRepository.Query()
+                .FirstOrDefaultAsync(t => t.TableId == tableId);
             if (table == null || table.IsDeleted)
                 return false;
 
@@ -276,12 +356,13 @@ namespace RestaurantPOS.Services
                 throw new InvalidOperationException("This table cannot be deleted.");
 
             // 진행 중인 주문이 있는지 확인
-            var activeOrders = await _unitOfWork.OrderRepository
-                .FindAsync(o => o.TableId == tableId && 
+            var hasActiveOrders = await _unitOfWork.OrderRepository.Query()
+                .AsNoTracking()
+                .AnyAsync(o => o.TableId == tableId && 
                          (o.Status == "Pending" || 
                           o.Status == "InProgress"));
             
-            if (activeOrders.Any())
+            if (hasActiveOrders)
                 throw new InvalidOperationException("사용 중인 테이블은 삭제할 수 없습니다. 먼저 주문을 완료하거나 취소해주세요.");
 
             // 논리적 삭제 수행
@@ -297,7 +378,9 @@ namespace RestaurantPOS.Services
 
         public async Task<bool> UpdateTableStatusAsync(int tableId, TableStatus newStatus)
         {
-            var table = await _unitOfWork.TableRepository.GetByIdAsync(tableId);
+            // AsNoTracking 없이 새로 조회하여 tracking 활성화
+            var table = await _unitOfWork.TableRepository.Query()
+                .FirstOrDefaultAsync(t => t.TableId == tableId);
             if (table == null)
                 return false;
 
@@ -316,7 +399,9 @@ namespace RestaurantPOS.Services
 
         public async Task<bool> OccupyTableAsync(int tableId, int? orderId = null)
         {
-            var table = await _unitOfWork.TableRepository.GetByIdAsync(tableId);
+            // AsNoTracking 없이 새로 조회하여 tracking 활성화
+            var table = await _unitOfWork.TableRepository.Query()
+                .FirstOrDefaultAsync(t => t.TableId == tableId);
             if (table == null)
                 return false;
 
@@ -334,7 +419,9 @@ namespace RestaurantPOS.Services
 
         public async Task<bool> ReleaseTableAsync(int tableId)
         {
-            var table = await _unitOfWork.TableRepository.GetByIdAsync(tableId);
+            // AsNoTracking 없이 새로 조회하여 tracking 활성화
+            var table = await _unitOfWork.TableRepository.Query()
+                .FirstOrDefaultAsync(t => t.TableId == tableId);
             if (table == null)
                 return false;
 
@@ -349,7 +436,9 @@ namespace RestaurantPOS.Services
 
         public async Task<bool> ReserveTableAsync(int tableId, TableReservationDto reservationDto)
         {
-            var table = await _unitOfWork.TableRepository.GetByIdAsync(tableId);
+            // AsNoTracking 없이 새로 조회하여 tracking 활성화
+            var table = await _unitOfWork.TableRepository.Query()
+                .FirstOrDefaultAsync(t => t.TableId == tableId);
             if (table == null)
                 return false;
 
@@ -369,7 +458,9 @@ namespace RestaurantPOS.Services
 
         public async Task<bool> SetTableCleaningAsync(int tableId)
         {
-            var table = await _unitOfWork.TableRepository.GetByIdAsync(tableId);
+            // AsNoTracking 없이 새로 조회하여 tracking 활성화
+            var table = await _unitOfWork.TableRepository.Query()
+                .FirstOrDefaultAsync(t => t.TableId == tableId);
             if (table == null)
                 return false;
 
@@ -388,30 +479,33 @@ namespace RestaurantPOS.Services
 
         public async Task<bool> IsTableAvailableAsync(int tableId)
         {
-            var table = await _unitOfWork.TableRepository.GetByIdAsync(tableId);
-            return table != null && table.TableStatus == TableStatus.Available;
+            return await _unitOfWork.TableRepository.Query()
+                .AsNoTracking()
+                .AnyAsync(t => t.TableId == tableId && t.TableStatus == TableStatus.Available);
         }
 
         public async Task<bool> IsSpaceNameUniqueAsync(string spaceName, int? excludeSpaceId = null)
         {
-            var spaces = await _unitOfWork.SpaceRepository
-                .FindAsync(s => s.SpaceName == spaceName);
+            var query = _unitOfWork.SpaceRepository.Query()
+                .AsNoTracking()
+                .Where(s => s.SpaceName == spaceName);
             
             if (excludeSpaceId.HasValue)
-                spaces = spaces.Where(s => s.SpaceId != excludeSpaceId.Value);
+                query = query.Where(s => s.SpaceId != excludeSpaceId.Value);
 
-            return !spaces.Any();
+            return !await query.AnyAsync();
         }
 
         public async Task<bool> IsTableNameUniqueInSpaceAsync(string tableName, int spaceId, int? excludeTableId = null)
         {
-            var tables = await _unitOfWork.TableRepository
-                .FindAsync(t => t.TableName == tableName && t.SpaceId == spaceId && !t.IsDeleted);
+            var query = _unitOfWork.TableRepository.Query()
+                .AsNoTracking()
+                .Where(t => t.TableName == tableName && t.SpaceId == spaceId && !t.IsDeleted);
             
             if (excludeTableId.HasValue)
-                tables = tables.Where(t => t.TableId != excludeTableId.Value);
+                query = query.Where(t => t.TableId != excludeTableId.Value);
 
-            return !tables.Any();
+            return !await query.AnyAsync();
         }
 
         #endregion

@@ -1,0 +1,99 @@
+<UserControl x:Class="RestaurantPOS.WPF.Modules.SettingsModule.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:dx="http://schemas.devexpress.com/winfx/2008/xaml/core"
+             xmlns:dxmvvm="http://schemas.devexpress.com/winfx/2008/xaml/mvvm"
+             xmlns:prism="http://prismlibrary.com/"
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             mc:Ignorable="d" 
+             d:DesignHeight="768" d:DesignWidth="1366">
+    
+    <UserControl.Resources>
+        <!-- Menu Button Style for Touch -->
+        <Style x:Key="MenuButtonStyle" TargetType="dx:SimpleButton">
+            <Setter Property="Height" Value="80"/>
+            <Setter Property="Margin" Value="10,5"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="20,0"/>
+        </Style>
+        
+        <!-- Selected Menu Button Style -->
+        <Style x:Key="SelectedMenuButtonStyle" TargetType="dx:SimpleButton" BasedOn="{StaticResource MenuButtonStyle}">
+            <Setter Property="Background" Value="#E3F2FD"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+    </UserControl.Resources>
+    
+    <Grid Background="#F0F0F0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="80"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <Border Grid.Row="0" Background="White" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" 
+                           Text="설정" 
+                           FontSize="28" 
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           Margin="30,0"/>
+                
+                <dx:SimpleButton Grid.Column="2" 
+                                 Content="돌아가기" 
+                                 Width="150"
+                                 Height="60"
+                                 Margin="20,0"
+                                 FontSize="18"
+                                 Command="{Binding GoBackCommand}"
+                                 Glyph="{dx:DXImage Image=Backward_32x32.png}"/>
+            </Grid>
+        </Border>
+        
+        <!-- Main Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Left Menu -->
+            <Border Grid.Column="0" Background="White" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,10">
+                        <dx:SimpleButton Content="테이블/홀 관리" 
+                                         Command="{Binding NavigateToTableSettingsCommand}"
+                                         Style="{Binding IsTableSettingsSelected, Converter={dxmvvm:BooleanToObjectConverter TrueValue={StaticResource SelectedMenuButtonStyle}, FalseValue={StaticResource MenuButtonStyle}}}"
+                                         Glyph="{dx:DXImage Image=Table_32x32.png}"/>
+                        
+                        <dx:SimpleButton Content="메뉴 관리" 
+                                         Command="{Binding NavigateToMenuSettingsCommand}"
+                                         Style="{Binding IsMenuSettingsSelected, Converter={dxmvvm:BooleanToObjectConverter TrueValue={StaticResource SelectedMenuButtonStyle}, FalseValue={StaticResource MenuButtonStyle}}}"
+                                         Glyph="{dx:DXImage Image=Paste_32x32.png}"/>
+                        
+                        <dx:SimpleButton Content="시스템 설정" 
+                                         Command="{Binding NavigateToSystemSettingsCommand}"
+                                         Style="{Binding IsSystemSettingsSelected, Converter={dxmvvm:BooleanToObjectConverter TrueValue={StaticResource SelectedMenuButtonStyle}, FalseValue={StaticResource MenuButtonStyle}}}"
+                                         IsEnabled="False"
+                                         Glyph="{dx:DXImage Image=Properties_32x32.png}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+            
+            <!-- Right Content Area -->
+            <Border Grid.Column="1" Background="#F0F0F0" Padding="20">
+                <ContentControl prism:RegionManager.RegionName="SettingsContentRegion"/>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

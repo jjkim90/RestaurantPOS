@@ -53,7 +53,7 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
             {
                 Title = "홀 수정";
                 SpaceName = space.SpaceName;
-                // IsActive는 SpaceViewModel에 없으므로 기본값 사용
+                IsActive = space.IsActive;
             }
             else
             {

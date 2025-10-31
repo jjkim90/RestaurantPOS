@@ -1,0 +1,10 @@
+namespace RestaurantPOS.WPF.Modules.SettingsModule.Views
+{
+    public partial class SettingsView : System.Windows.Controls.UserControl
+    {
+        public SettingsView()
+        {
+            InitializeComponent();
+        }
+    }
+}

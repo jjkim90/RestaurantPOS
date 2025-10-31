@@ -10,9 +10,11 @@ namespace RestaurantPOS.Core.Interfaces
     {
         // Read operations
         Task<T?> GetByIdAsync(int id);
+        Task<T?> GetByIdAsync(int id, bool tracking);
         Task<IEnumerable<T>> GetAllAsync();
         Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate);
         IQueryable<T> Query();
+        IQueryable<T> QueryAsNoTracking();
 
         // Write operations
         Task<T> AddAsync(T entity);

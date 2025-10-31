@@ -23,22 +23,34 @@
         <!-- Loading Overlay -->
         <dx:WaitIndicator Grid.Row="1" Visibility="{Binding IsLoading, Converter={dx:BooleanToVisibilityConverter}}" />
 
-        <!-- Toolbar -->
-        <dxb:ToolBarControl Grid.Row="0" AllowCustomizationMenu="False">
-            <dxb:BarButtonItem Content="Add Category" Command="{Binding AddCategoryCommand}" 
-                              Glyph="{dx:DXImage Image=AddNewDataSource_16x16.png}" />
-            <dxb:BarButtonItem Content="Edit Category" Command="{Binding EditCategoryCommand}" 
-                              Glyph="{dx:DXImage Image=EditDataSource_16x16.png}" />
-            <dxb:BarButtonItem Content="Delete Category" Command="{Binding DeleteCategoryCommand}" 
-                              Glyph="{dx:DXImage Image=DeleteDataSource2_16x16.png}" />
-            <dxb:BarItemSeparator />
-            <dxb:BarButtonItem Content="Add Menu Item" Command="{Binding AddMenuItemCommand}" 
-                              Glyph="{dx:DXImage Image=Add_16x16.png}" />
-            <dxb:BarButtonItem Content="Edit Menu Item" Command="{Binding EditMenuItemCommand}" 
-                              Glyph="{dx:DXImage Image=Edit_16x16.png}" />
-            <dxb:BarButtonItem Content="Delete Menu Item" Command="{Binding DeleteMenuItemCommand}" 
-                              Glyph="{dx:DXImage Image=Delete_16x16.png}" />
-        </dxb:ToolBarControl>
+        <!-- Touch-friendly Toolbar -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Background="White" Margin="10">
+            <dx:SimpleButton Content="카테고리 추가" 
+                             Command="{Binding AddCategoryCommand}"
+                             Glyph="{dx:DXImage Image=AddNewDataSource_32x32.png}"
+                             Width="180" Height="60" Margin="5" FontSize="16"/>
+            <dx:SimpleButton Content="카테고리 수정" 
+                             Command="{Binding EditCategoryCommand}"
+                             Glyph="{dx:DXImage Image=EditDataSource_32x32.png}"
+                             Width="180" Height="60" Margin="5" FontSize="16"/>
+            <dx:SimpleButton Content="카테고리 삭제" 
+                             Command="{Binding DeleteCategoryCommand}"
+                             Glyph="{dx:DXImage Image=DeleteDataSource2_32x32.png}"
+                             Width="180" Height="60" Margin="5" FontSize="16"/>
+            <Border Width="2" Background="LightGray" Margin="10,0"/>
+            <dx:SimpleButton Content="메뉴 추가" 
+                             Command="{Binding AddMenuItemCommand}"
+                             Glyph="{dx:DXImage Image=Add_32x32.png}"
+                             Width="150" Height="60" Margin="5" FontSize="16"/>
+            <dx:SimpleButton Content="메뉴 수정" 
+                             Command="{Binding EditMenuItemCommand}"
+                             Glyph="{dx:DXImage Image=Edit_32x32.png}"
+                             Width="150" Height="60" Margin="5" FontSize="16"/>
+            <dx:SimpleButton Content="메뉴 삭제" 
+                             Command="{Binding DeleteMenuItemCommand}"
+                             Glyph="{dx:DXImage Image=Delete_32x32.png}"
+                             Width="150" Height="60" Margin="5" FontSize="16"/>
+        </StackPanel>
 
         <!-- Main Content -->
         <Grid Grid.Row="1">
@@ -60,7 +72,14 @@
                                           ShowIndicator="False"
                                           NavigationStyle="Row"
                                           ShowVerticalLines="False"
-                                          ShowHorizontalLines="True"/>
+                                          ShowHorizontalLines="True">
+                                <dxg:TableView.RowStyle>
+                                    <Style TargetType="dxg:RowControl">
+                                        <Setter Property="FontSize" Value="16"/>
+                                        <Setter Property="Height" Value="60"/>
+                                    </Style>
+                                </dxg:TableView.RowStyle>
+                            </dxg:TableView>
                         </dxg:GridControl.View>
                         <dxg:GridColumn FieldName="CategoryName" Header="Name" Width="*"/>
                         <dxg:GridColumn FieldName="DisplayOrder" Header="Order" Width="60" HorizontalHeaderContentAlignment="Center"/>
@@ -91,7 +110,14 @@
                                           ShowIndicator="False"
                                           NavigationStyle="Row"
                                           ShowVerticalLines="False"
-                                          ShowHorizontalLines="True"/>
+                                          ShowHorizontalLines="True">
+                                <dxg:TableView.RowStyle>
+                                    <Style TargetType="dxg:RowControl">
+                                        <Setter Property="FontSize" Value="16"/>
+                                        <Setter Property="Height" Value="60"/>
+                                    </Style>
+                                </dxg:TableView.RowStyle>
+                            </dxg:TableView>
                         </dxg:GridControl.View>
                         <dxg:GridColumn FieldName="ItemName" Header="Name" Width="200"/>
                         <dxg:GridColumn FieldName="Price" Header="Price" Width="100">

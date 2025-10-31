@@ -70,6 +70,11 @@ namespace RestaurantPOS.Data.Repositories
             }
         }
 
+        public void ClearChangeTracker()
+        {
+            _context.ChangeTracker.Clear();
+        }
+
         public void Dispose()
         {
             _transaction?.Dispose();

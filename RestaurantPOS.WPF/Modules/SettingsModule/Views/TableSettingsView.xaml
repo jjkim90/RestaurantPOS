@@ -1,0 +1,211 @@
+<UserControl x:Class="RestaurantPOS.WPF.Modules.SettingsModule.Views.TableSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:dx="http://schemas.devexpress.com/winfx/2008/xaml/core"
+             xmlns:dxg="http://schemas.devexpress.com/winfx/2008/xaml/grid"
+             xmlns:dxe="http://schemas.devexpress.com/winfx/2008/xaml/editors"
+             xmlns:dxmvvm="http://schemas.devexpress.com/winfx/2008/xaml/mvvm"
+             xmlns:prism="http://prismlibrary.com/"
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    
+    <UserControl.Resources>
+        <!-- Touch-friendly button style -->
+        <Style x:Key="TouchButtonStyle" TargetType="dx:SimpleButton">
+            <Setter Property="Height" Value="60"/>
+            <Setter Property="Width" Value="180"/>
+            <Setter Property="Margin" Value="10"/>
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+    </UserControl.Resources>
+    
+    <Grid Background="White">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#F5F5F5" Padding="20" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+            <TextBlock Text="테이블/홀 관리" FontSize="24" FontWeight="Bold"/>
+        </Border>
+        
+        <!-- Content -->
+        <Grid Grid.Row="1" Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Tab Control -->
+            <dx:DXTabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}">
+                <!-- Spaces Tab -->
+                <dx:DXTabItem Header="홀 관리" Padding="20,15">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Space Management Buttons -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+                            <dx:SimpleButton Content="홀 추가" 
+                                             Style="{StaticResource TouchButtonStyle}"
+                                             Command="{Binding AddSpaceCommand}"
+                                             Glyph="{dx:DXImage Image=Add_32x32.png}"/>
+                            
+                            <dx:SimpleButton Content="홀 수정" 
+                                             Style="{StaticResource TouchButtonStyle}"
+                                             Command="{Binding EditSpaceCommand}"
+                                             CommandParameter="{Binding SelectedSpace}"
+                                             Glyph="{dx:DXImage Image=Edit_32x32.png}"/>
+                            
+                            <dx:SimpleButton Content="홀 삭제" 
+                                             Style="{StaticResource TouchButtonStyle}"
+                                             Command="{Binding DeleteSpaceCommand}"
+                                             CommandParameter="{Binding SelectedSpace}"
+                                             Glyph="{dx:DXImage Image=Delete_32x32.png}"/>
+                        </StackPanel>
+                        
+                        <!-- Space Grid -->
+                        <dxg:GridControl Grid.Row="1" 
+                                         ItemsSource="{Binding Spaces}"
+                                         SelectedItem="{Binding SelectedSpace}"
+                                         ShowLoadingPanel="{Binding IsLoading}">
+                            <dxg:GridControl.View>
+                                <dxg:TableView ShowGroupPanel="False"
+                                               AllowEditing="False"
+                                               ShowVerticalLines="False"
+                                               ShowHorizontalLines="True">
+                                    <dxg:TableView.RowStyle>
+                                        <Style TargetType="dxg:RowControl">
+                                            <Setter Property="FontSize" Value="16"/>
+                                            <Setter Property="Height" Value="60"/>
+                                        </Style>
+                                    </dxg:TableView.RowStyle>
+                                </dxg:TableView>
+                            </dxg:GridControl.View>
+                            
+                            <dxg:GridControl.Columns>
+                                <dxg:GridColumn FieldName="SpaceName" Header="홀 이름" Width="200" HorizontalHeaderContentAlignment="Center"/>
+                                <dxg:GridColumn FieldName="TableCount" Header="테이블 수" Width="120" HorizontalHeaderContentAlignment="Center">
+                                    <dxg:GridColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Value}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </dxg:GridColumn.CellTemplate>
+                                </dxg:GridColumn>
+                                <dxg:GridColumn FieldName="CreatedAt" Header="생성일" Width="200" HorizontalHeaderContentAlignment="Center">
+                                    <dxg:GridColumn.EditSettings>
+                                        <dxe:DateEditSettings DisplayFormat="yyyy-MM-dd HH:mm" HorizontalContentAlignment="Center"/>
+                                    </dxg:GridColumn.EditSettings>
+                                </dxg:GridColumn>
+                            </dxg:GridControl.Columns>
+                        </dxg:GridControl>
+                    </Grid>
+                </dx:DXTabItem>
+                
+                <!-- Tables Tab -->
+                <dx:DXTabItem Header="테이블 관리" Padding="20,15">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Space Filter -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                            <TextBlock Text="홀 선택:" VerticalAlignment="Center" FontSize="16" Margin="0,0,10,0"/>
+                            <dxe:ComboBoxEdit ItemsSource="{Binding SpacesForFilter}"
+                                              SelectedItem="{Binding SelectedSpaceForFilter}"
+                                              DisplayMember="SpaceName"
+                                              Width="200"
+                                              Height="50"
+                                              FontSize="16"/>
+                        </StackPanel>
+                        
+                        <!-- Table Management Buttons -->
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,20">
+                            <dx:SimpleButton Content="테이블 추가" 
+                                             Style="{StaticResource TouchButtonStyle}"
+                                             Command="{Binding AddTableCommand}"
+                                             Glyph="{dx:DXImage Image=Add_32x32.png}"/>
+                            
+                            <dx:SimpleButton Content="테이블 수정" 
+                                             Style="{StaticResource TouchButtonStyle}"
+                                             Command="{Binding EditTableCommand}"
+                                             CommandParameter="{Binding SelectedTable}"
+                                             Glyph="{dx:DXImage Image=Edit_32x32.png}"/>
+                            
+                            <dx:SimpleButton Content="테이블 삭제" 
+                                             Style="{StaticResource TouchButtonStyle}"
+                                             Command="{Binding DeleteTableCommand}"
+                                             CommandParameter="{Binding SelectedTable}"
+                                             Glyph="{dx:DXImage Image=Delete_32x32.png}"/>
+                        </StackPanel>
+                        
+                        <!-- Table Grid -->
+                        <dxg:GridControl Grid.Row="2" 
+                                         ItemsSource="{Binding FilteredTables}"
+                                         SelectedItem="{Binding SelectedTable}"
+                                         ShowLoadingPanel="{Binding IsLoading}">
+                            <dxg:GridControl.View>
+                                <dxg:TableView ShowGroupPanel="False"
+                                               AllowEditing="False"
+                                               ShowVerticalLines="False"
+                                               ShowHorizontalLines="True">
+                                    <dxg:TableView.RowStyle>
+                                        <Style TargetType="dxg:RowControl">
+                                            <Setter Property="FontSize" Value="16"/>
+                                            <Setter Property="Height" Value="60"/>
+                                        </Style>
+                                    </dxg:TableView.RowStyle>
+                                </dxg:TableView>
+                            </dxg:GridControl.View>
+                            
+                            <dxg:GridControl.Columns>
+                                <dxg:GridColumn FieldName="TableNumber" Header="테이블 번호" Width="120" HorizontalHeaderContentAlignment="Center">
+                                    <dxg:GridColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Value}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </dxg:GridColumn.CellTemplate>
+                                </dxg:GridColumn>
+                                <dxg:GridColumn FieldName="TableName" Header="테이블 이름" Width="180" HorizontalHeaderContentAlignment="Center">
+                                    <dxg:GridColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Value}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </dxg:GridColumn.CellTemplate>
+                                </dxg:GridColumn>
+                                <dxg:GridColumn FieldName="SpaceName" Header="홀" Width="150" HorizontalHeaderContentAlignment="Center">
+                                    <dxg:GridColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Value}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </dxg:GridColumn.CellTemplate>
+                                </dxg:GridColumn>
+                                <dxg:GridColumn FieldName="StatusText" Header="상태" Width="120" HorizontalHeaderContentAlignment="Center">
+                                    <dxg:GridColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Value}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </dxg:GridColumn.CellTemplate>
+                                </dxg:GridColumn>
+                                <dxg:GridColumn FieldName="CreatedAt" Header="생성일" Width="180" HorizontalHeaderContentAlignment="Center">
+                                    <dxg:GridColumn.EditSettings>
+                                        <dxe:DateEditSettings DisplayFormat="yyyy-MM-dd HH:mm" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+                                    </dxg:GridColumn.EditSettings>
+                                </dxg:GridColumn>
+                            </dxg:GridControl.Columns>
+                        </dxg:GridControl>
+                    </Grid>
+                </dx:DXTabItem>
+            </dx:DXTabControl>
+        </Grid>
+    </Grid>
+</UserControl>
