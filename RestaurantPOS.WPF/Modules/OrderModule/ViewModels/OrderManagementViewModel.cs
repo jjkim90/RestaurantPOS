@@ -1,6 +1,7 @@
 using Prism.Commands;
 using Prism.Mvvm;
 using Prism.Regions;
+using Prism.Ioc;
 using RestaurantPOS.Core.DTOs;
 using RestaurantPOS.Core.Entities;
 using RestaurantPOS.Core.Interfaces;
@@ -22,6 +23,7 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         private readonly RestaurantPOS.Core.Interfaces.IMenuCacheService _menuCacheService;
         private readonly IOrderService _orderService;
         private readonly IPrintService _printService;
+        private readonly IContainerProvider _containerProvider;
         private readonly SemaphoreSlim _dbSemaphore = new SemaphoreSlim(1, 1);
         
         private int _currentTableId;
@@ -38,13 +40,14 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         private decimal _existingOrderAmount;  // 기존 주문 금액
         private decimal _newOrderAmount;  // 새 주문 금액
 
-        public OrderManagementViewModel(IUnitOfWork unitOfWork, IRegionManager regionManager, RestaurantPOS.Core.Interfaces.IMenuCacheService menuCacheService, IOrderService orderService, IPrintService printService)
+        public OrderManagementViewModel(IUnitOfWork unitOfWork, IRegionManager regionManager, RestaurantPOS.Core.Interfaces.IMenuCacheService menuCacheService, IOrderService orderService, IPrintService printService, IContainerProvider containerProvider)
         {
             _unitOfWork = unitOfWork;
             _regionManager = regionManager;
             _menuCacheService = menuCacheService;
             _orderService = orderService;
             _printService = printService;
+            _containerProvider = containerProvider;
             
             Categories = new ObservableCollection<CategoryViewModel>();
             MenuItems = new ObservableCollection<MenuItemViewModel>();
@@ -353,16 +356,25 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
                 }
 
                 // 결제 다이얼로그 표시
-                var paymentViewModel = new PaymentViewModel { Order = currentOrder };
+                var paymentViewModel = _containerProvider.Resolve<PaymentViewModel>();
+                paymentViewModel.Order = currentOrder;
                 var paymentDialog = new PaymentDialog { DataContext = paymentViewModel };
                 
                 bool paymentProcessed = false;
                 string paymentMethod = "";
 
-                paymentViewModel.PaymentCompleted += (s, method) =>
+                string paymentKey = null;
+                string transactionId = null;
+                
+                paymentViewModel.PaymentCompleted += (s, args) =>
                 {
-                    paymentProcessed = true;
-                    paymentMethod = method;
+                    if (args.IsSuccess)
+                    {
+                        paymentProcessed = true;
+                        paymentMethod = args.PaymentMethod;
+                        paymentKey = args.PaymentKey;
+                        transactionId = args.TransactionId;
+                    }
                     paymentDialog.Close();
                 };
 
@@ -376,7 +388,7 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
                 if (paymentProcessed)
                 {
                     // 결제 처리
-                    var completedOrder = await _orderService.ProcessPaymentAsync(_currentOrderId, paymentMethod);
+                    var completedOrder = await _orderService.ProcessPaymentAsync(_currentOrderId, paymentMethod, paymentKey, transactionId);
                     
                     // UI 초기화
                     ExistingOrderItems.Clear();

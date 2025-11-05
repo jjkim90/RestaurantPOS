@@ -41,6 +41,9 @@
                 <dxb:BarSubItem Content="도움말">
                     <dxb:BarButtonItem Content="정보" Command="{Binding AboutCommand}"/>
                 </dxb:BarSubItem>
+                <dxb:BarSubItem Content="테스트">
+                    <dxb:BarButtonItem Content="WebView2 테스트" Command="{Binding TestWebView2Command}"/>
+                </dxb:BarSubItem>
             </dxb:MainMenuControl>
         </dxb:BarContainerControl>
         

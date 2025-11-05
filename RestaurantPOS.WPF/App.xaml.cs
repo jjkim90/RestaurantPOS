@@ -35,10 +35,29 @@ namespace RestaurantPOS.WPF
     {
         protected override Window CreateShell()
         {
-            // Set DevExpress Theme
-            ApplicationThemeHelper.ApplicationThemeName = Theme.Office2019ColorfulName;
-            
-            return Container.Resolve<MainWindow>();
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("CreateShell 시작");
+                
+                // Set DevExpress Theme
+                ApplicationThemeHelper.ApplicationThemeName = Theme.Office2019ColorfulName;
+                System.Diagnostics.Debug.WriteLine("DevExpress 테마 설정 완료");
+                
+                var mainWindow = Container.Resolve<MainWindow>();
+                System.Diagnostics.Debug.WriteLine($"MainWindow 생성 완료: {mainWindow != null}");
+                
+                mainWindow.Show();
+                System.Diagnostics.Debug.WriteLine("MainWindow.Show() 호출 완료");
+                
+                return mainWindow;
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "CreateShell에서 오류 발생");
+                System.Windows.MessageBox.Show($"프로그램 시작 중 오류가 발생했습니다.\n\nCreateShell: {ex.Message}\n\n상세: {ex.InnerException?.Message}", 
+                    "시작 오류", MessageBoxButton.OK, MessageBoxImage.Error);
+                throw;
+            }
         }
 
         protected override void ConfigureModuleCatalog(IModuleCatalog moduleCatalog)
@@ -51,18 +70,32 @@ namespace RestaurantPOS.WPF
 
         protected override void RegisterTypes(IContainerRegistry containerRegistry)
         {
+            System.Diagnostics.Debug.WriteLine("RegisterTypes 시작");
+            
             // Serilog 설정
             ConfigureLogging();
 
-            // DbContext 등록 - 하드코딩된 연결 문자열 사용
-            containerRegistry.Register<DbContextOptions<RestaurantContext>>(() =>
+            try
             {
-                var optionsBuilder = new DbContextOptionsBuilder<RestaurantContext>();
-                optionsBuilder.UseSqlServer(GetConnectionString());
-                return optionsBuilder.Options;
-            });
+                System.Diagnostics.Debug.WriteLine("DbContext 등록 시작");
+                
+                // DbContext 등록 - 하드코딩된 연결 문자열 사용
+                containerRegistry.Register<DbContextOptions<RestaurantContext>>(() =>
+                {
+                    var optionsBuilder = new DbContextOptionsBuilder<RestaurantContext>();
+                    optionsBuilder.UseSqlServer(GetConnectionString());
+                    return optionsBuilder.Options;
+                });
 
-            containerRegistry.RegisterScoped<RestaurantContext>();
+                containerRegistry.RegisterScoped<RestaurantContext>();
+                
+                System.Diagnostics.Debug.WriteLine("DbContext 등록 완료");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DbContext 등록 오류: {ex.Message}");
+                throw;
+            }
 
             // Repository 및 UnitOfWork 등록
             containerRegistry.RegisterScoped<IUnitOfWork, UnitOfWork>();
@@ -94,14 +127,86 @@ namespace RestaurantPOS.WPF
             
             // Serilog ILogger 등록
             containerRegistry.RegisterInstance<ILogger>(Log.Logger);
+            
+            // Configuration 등록 - 1단계: Configuration만 먼저 등록
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("Configuration 등록 시작...");
+                
+                // Configuration 등록
+                var configuration = BuildConfiguration();
+                if (configuration != null)
+                {
+                    containerRegistry.RegisterInstance<IConfiguration>(configuration);
+                    System.Diagnostics.Debug.WriteLine("Configuration DI 등록 완료");
+                    Log.Information("Configuration successfully registered in DI container");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("Configuration is null!");
+                    Log.Warning("Configuration is null, skipping registration");
+                }
+                
+                // 2단계: TossPaymentsService 등록
+                System.Diagnostics.Debug.WriteLine("TossPaymentsService 등록 시작...");
+                try
+                {
+                    containerRegistry.RegisterScoped<ITossPaymentsService, TossPaymentsService>();
+                    System.Diagnostics.Debug.WriteLine("TossPaymentsService DI 등록 완료");
+                    Log.Information("TossPaymentsService successfully registered in DI container");
+                }
+                catch (Exception serviceEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"TossPaymentsService 등록 오류: {serviceEx.Message}");
+                    Log.Error(serviceEx, "Failed to register TossPaymentsService");
+                    // 서비스 등록 실패해도 애플리케이션은 계속 실행
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Configuration 등록 오류: {ex.Message}");
+                Log.Error(ex, "Failed to register Configuration in DI container");
+                
+                // 오류가 발생해도 애플리케이션은 계속 실행되도록 함
+                // 빈 Configuration을 등록
+                var emptyConfig = new ConfigurationBuilder().Build();
+                containerRegistry.RegisterInstance<IConfiguration>(emptyConfig);
+                System.Diagnostics.Debug.WriteLine("Empty Configuration registered as fallback");
+            }
+            
+            // TossPaymentsService 등록은 아직 비활성화 상태 유지
+            // TODO: Configuration 등록이 정상 작동 확인 후 다음 단계에서 활성화
+            /*
+            containerRegistry.RegisterScoped<ITossPaymentsService, TossPaymentsService>();
+            */
 
             // Views 등록
             containerRegistry.RegisterForNavigation<MainWindow>(nameof(MainWindow));
+            
+            System.Diagnostics.Debug.WriteLine("RegisterTypes 완료 - Configuration 및 TossPaymentsService 포함");
         }
 
         protected override async void OnInitialized()
         {
             base.OnInitialized();
+
+            // WebView2 테스트를 위한 임시 코드
+            #if DEBUG
+            var testResult = System.Windows.MessageBox.Show(
+                "WebView2 테스트 창을 열까요?\n\n" +
+                "예: 테스트 창 열기\n" +
+                "아니오: 정상적으로 POS 실행", 
+                "WebView2 테스트", 
+                MessageBoxButton.YesNo, 
+                MessageBoxImage.Question);
+            
+            if (testResult == MessageBoxResult.Yes)
+            {
+                var testWindow = new WebView2TestWindow();
+                testWindow.ShowDialog();
+                return;
+            }
+            #endif
 
             try
             {
@@ -167,14 +272,59 @@ namespace RestaurantPOS.WPF
         {
             try
             {
+                // 현재 실행 디렉토리 확인
+                var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                System.Diagnostics.Debug.WriteLine($"Configuration BaseDirectory: {baseDirectory}");
+                Log.Information("Configuration BaseDirectory: {BaseDirectory}", baseDirectory);
+                
+                // appsettings.json 파일 경로 확인
+                var settingsPath = Path.Combine(baseDirectory, "appsettings.json");
+                System.Diagnostics.Debug.WriteLine($"Looking for appsettings.json at: {settingsPath}");
+                Log.Information("Looking for appsettings.json at: {SettingsPath}", settingsPath);
+                
+                // 파일 존재 여부 확인
+                if (File.Exists(settingsPath))
+                {
+                    System.Diagnostics.Debug.WriteLine("appsettings.json found!");
+                    Log.Information("appsettings.json file found successfully");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("appsettings.json NOT found!");
+                    Log.Warning("appsettings.json file not found at {SettingsPath}", settingsPath);
+                }
+                
                 var builder = new ConfigurationBuilder()
-                    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+                    .SetBasePath(baseDirectory)
+                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);  // WSL 환경 호환성을 위해 false로 설정
 
-                return builder.Build();
+                System.Diagnostics.Debug.WriteLine("Building configuration...");
+                var configuration = builder.Build();
+                
+                // 설정 내용 확인
+                var tossPaymentsSection = configuration.GetSection("TossPayments");
+                if (tossPaymentsSection.Exists())
+                {
+                    System.Diagnostics.Debug.WriteLine("TossPayments section found in configuration");
+                    Log.Information("TossPayments configuration section loaded successfully");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("TossPayments section NOT found in configuration");
+                    Log.Warning("TossPayments configuration section not found");
+                }
+                
+                System.Diagnostics.Debug.WriteLine("Configuration built successfully");
+                Log.Information("Configuration built successfully");
+                
+                return configuration;
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"BuildConfiguration error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                Log.Error(ex, "Failed to build configuration");
+                
                 // 오류 시 빈 Configuration 반환
                 return new ConfigurationBuilder().Build();
             }
@@ -188,6 +338,8 @@ namespace RestaurantPOS.WPF
                 .MinimumLevel.Debug()
                 .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
                 .CreateLogger();
+                
+            System.Diagnostics.Debug.WriteLine("Serilog 설정 완료");
         }
 
         protected override void OnExit(ExitEventArgs e)

@@ -95,7 +95,7 @@ namespace RestaurantPOS.Services
             }
         }
 
-        public async Task<OrderDTO> ProcessPaymentAsync(int orderId, string paymentMethod)
+        public async Task<OrderDTO> ProcessPaymentAsync(int orderId, string paymentMethod, string? paymentKey = null, string? transactionId = null)
         {
             var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId);
             if (order == null)
@@ -103,6 +103,8 @@ namespace RestaurantPOS.Services
 
             order.PaymentMethod = paymentMethod;
             order.PaymentDate = DateTime.Now;
+            order.PaymentKey = paymentKey;
+            order.TransactionId = transactionId;
             order.Status = "Completed";
             order.UpdatedAt = DateTime.Now;
             

@@ -13,6 +13,8 @@ namespace RestaurantPOS.Core.Entities
         public string Status { get; set; } = "Pending";
         public string? PaymentMethod { get; set; }
         public DateTime? PaymentDate { get; set; }
+        public string? PaymentKey { get; set; }  // 토스페이먼츠 결제 키
+        public string? TransactionId { get; set; }  // 거래 ID
         public bool IsPrinted { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

@@ -11,7 +11,7 @@ namespace RestaurantPOS.Core.Interfaces
         Task<OrderDTO> CreateOrderAsync(int tableId, OrderItemDTO[] orderItems);
         Task<OrderDTO> GetActiveOrderByTableIdAsync(int tableId);
         Task UpdateOrderStatusAsync(int orderId, string status);
-        Task<OrderDTO> ProcessPaymentAsync(int orderId, string paymentMethod);
+        Task<OrderDTO> ProcessPaymentAsync(int orderId, string paymentMethod, string? paymentKey = null, string? transactionId = null);
         Task<string> GenerateOrderNumberAsync();
         
         // 새로운 메서드들
