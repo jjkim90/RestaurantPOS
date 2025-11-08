@@ -22,5 +22,6 @@ namespace RestaurantPOS.Core.Entities
         // Navigation properties
         public virtual Table Table { get; set; } = null!;
         public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
+        public virtual ICollection<PaymentTransaction> PaymentTransactions { get; set; } = new List<PaymentTransaction>();
     }
 }
