@@ -26,6 +26,7 @@ namespace RestaurantPOS.Data.Repositories
         public IRepository<MenuItem> MenuItemRepository => Repository<MenuItem>();
         public IRepository<Order> OrderRepository => Repository<Order>();
         public IRepository<OrderDetail> OrderDetailRepository => Repository<OrderDetail>();
+        public IRepository<PaymentTransaction> PaymentTransactionRepository => Repository<PaymentTransaction>();
 
         public IRepository<T> Repository<T>() where T : class
         {

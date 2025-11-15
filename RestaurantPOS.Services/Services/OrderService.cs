@@ -97,38 +97,67 @@ namespace RestaurantPOS.Services
 
         public async Task<OrderDTO> ProcessPaymentAsync(int orderId, string paymentMethod, string? paymentKey = null, string? transactionId = null)
         {
-            var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId);
-            if (order == null)
-                throw new InvalidOperationException("주문을 찾을 수 없습니다.");
-
-            order.PaymentMethod = paymentMethod;
-            order.PaymentDate = DateTime.Now;
-            order.PaymentKey = paymentKey;
-            order.TransactionId = transactionId;
-            order.Status = "Completed";
-            order.UpdatedAt = DateTime.Now;
+            await _unitOfWork.BeginTransactionAsync();
             
-            _unitOfWork.OrderRepository.Update(order);
-
-            // 테이블 상태도 변경
-            var table = await _unitOfWork.TableRepository.GetByIdAsync(order.TableId);
-            if (table != null)
+            try
             {
-                table.TableStatus = Core.Enums.TableStatus.Available;
-                table.UpdatedAt = DateTime.Now;
-                _unitOfWork.TableRepository.Update(table);
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId);
+                if (order == null)
+                    throw new InvalidOperationException("주문을 찾을 수 없습니다.");
+
+                // PaymentTransaction 생성
+                var transaction = new PaymentTransaction
+                {
+                    OrderId = orderId,
+                    PaymentMethod = paymentMethod,
+                    Amount = order.TotalAmount,
+                    PaymentKey = paymentKey,
+                    TransactionId = transactionId,
+                    Status = "Completed",
+                    SyncStatus = "Synced",
+                    PaymentDate = DateTime.Now,
+                    CreatedAt = DateTime.Now
+                };
+                
+                await _unitOfWork.PaymentTransactionRepository.AddAsync(transaction);
+
+                // Order 업데이트
+                order.PaymentMethod = paymentMethod;
+                order.PaymentDate = DateTime.Now;
+                order.PaymentKey = paymentKey;
+                order.TransactionId = transactionId;
+                order.Status = "Completed";
+                order.UpdatedAt = DateTime.Now;
+                
+                _unitOfWork.OrderRepository.Update(order);
+
+                // 테이블 상태도 변경
+                var table = await _unitOfWork.TableRepository.GetByIdAsync(order.TableId);
+                if (table != null)
+                {
+                    table.TableStatus = Core.Enums.TableStatus.Available;
+                    table.UpdatedAt = DateTime.Now;
+                    _unitOfWork.TableRepository.Update(table);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                // 업데이트된 주문 다시 조회
+                var updatedOrder = await _unitOfWork.OrderRepository.Query()
+                    .Include(o => o.Table)
+                    .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.MenuItem)
+                    .Include(o => o.PaymentTransactions)
+                    .FirstOrDefaultAsync(o => o.OrderId == orderId);
+
+                return _mapper.Map<OrderDTO>(updatedOrder);
             }
-
-            await _unitOfWork.SaveChangesAsync();
-
-            // 업데이트된 주문 다시 조회
-            var updatedOrder = await _unitOfWork.OrderRepository.Query()
-                .Include(o => o.Table)
-                .Include(o => o.OrderDetails)
-                .ThenInclude(od => od.MenuItem)
-                .FirstOrDefaultAsync(o => o.OrderId == orderId);
-
-            return _mapper.Map<OrderDTO>(updatedOrder);
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
         public async Task<string> GenerateOrderNumberAsync()
@@ -305,6 +334,112 @@ namespace RestaurantPOS.Services
                 .ToListAsync();
 
             return _mapper.Map<IEnumerable<OrderDetailDTO>>(confirmedDetails);
+        }
+
+        // 복합 결제 관련 메서드들
+        public async Task<OrderDTO> ProcessMultiPaymentAsync(int orderId, List<(string paymentMethod, decimal amount, string? paymentKey, string? transactionId)> payments)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            
+            try
+            {
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId);
+                if (order == null)
+                    throw new InvalidOperationException($"주문 {orderId}을(를) 찾을 수 없습니다.");
+
+                var totalPaidAmount = 0m;
+                
+                foreach (var payment in payments)
+                {
+                    var transaction = new PaymentTransaction
+                    {
+                        OrderId = orderId,
+                        PaymentMethod = payment.paymentMethod,
+                        Amount = payment.amount,
+                        PaymentKey = payment.paymentKey,
+                        TransactionId = payment.transactionId,
+                        Status = "Completed",
+                        SyncStatus = "Synced",
+                        PaymentDate = DateTime.Now,
+                        CreatedAt = DateTime.Now
+                    };
+                    
+                    await _unitOfWork.PaymentTransactionRepository.AddAsync(transaction);
+                    totalPaidAmount += payment.amount;
+                }
+
+                // 주문 상태 업데이트
+                if (totalPaidAmount >= order.TotalAmount)
+                {
+                    order.Status = "Completed";
+                    order.PaymentDate = DateTime.Now;
+                    order.PaymentMethod = "Multi"; // 복합 결제
+                    
+                    // 테이블 상태 업데이트
+                    var table = await _unitOfWork.TableRepository.GetByIdAsync(order.TableId);
+                    if (table != null)
+                    {
+                        table.TableStatus = TableStatus.Available;
+                        table.UpdatedAt = DateTime.Now;
+                    }
+                }
+                
+                order.UpdatedAt = DateTime.Now;
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+                
+                // 영수증 출력
+                if (order.Status == "Completed")
+                {
+                    var orderDto = await GetOrderWithDetailsAsync(orderId);
+                    await _printService.PrintReceiptAsync(orderDto);
+                    return orderDto;
+                }
+                
+                return await GetOrderWithDetailsAsync(orderId);
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        public async Task<PaymentTransactionDTO> AddPaymentTransactionAsync(int orderId, string paymentMethod, decimal amount, string? paymentKey = null, string? transactionId = null)
+        {
+            var transaction = new PaymentTransaction
+            {
+                OrderId = orderId,
+                PaymentMethod = paymentMethod,
+                Amount = amount,
+                PaymentKey = paymentKey,
+                TransactionId = transactionId,
+                Status = "Completed",
+                SyncStatus = "Synced",
+                PaymentDate = DateTime.Now,
+                CreatedAt = DateTime.Now
+            };
+            
+            await _unitOfWork.PaymentTransactionRepository.AddAsync(transaction);
+            await _unitOfWork.SaveChangesAsync();
+            
+            return _mapper.Map<PaymentTransactionDTO>(transaction);
+        }
+
+        public async Task<List<PaymentTransactionDTO>> GetOrderPaymentTransactionsAsync(int orderId)
+        {
+            var transactions = await _unitOfWork.PaymentTransactionRepository.Query()
+                .Where(pt => pt.OrderId == orderId)
+                .OrderBy(pt => pt.PaymentDate)
+                .ToListAsync();
+                
+            return _mapper.Map<List<PaymentTransactionDTO>>(transactions);
+        }
+
+        public async Task<bool> HasCompletedPaymentsAsync(int orderId)
+        {
+            return await _unitOfWork.PaymentTransactionRepository.Query()
+                .AnyAsync(pt => pt.OrderId == orderId && pt.Status == "Completed");
         }
     }
 }

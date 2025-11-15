@@ -144,8 +144,14 @@
                                VerticalAlignment="Center"
                                FontSize="14"
                                Foreground="Gray"/>
-                    <dx:SimpleButton Content="설정" 
+                    <dx:SimpleButton Content="결제 내역" 
                                      Margin="20,0,0,0"
+                                     Width="100"
+                                     Height="60"
+                                     FontSize="16"
+                                     Command="{Binding NavigateToPaymentHistoryCommand}"/>
+                    <dx:SimpleButton Content="설정" 
+                                     Margin="10,0,0,0"
                                      Width="100"
                                      Height="60"
                                      FontSize="16"

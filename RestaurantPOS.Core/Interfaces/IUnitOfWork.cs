@@ -13,6 +13,7 @@ namespace RestaurantPOS.Core.Interfaces
         IRepository<MenuItem> MenuItemRepository { get; }
         IRepository<Order> OrderRepository { get; }
         IRepository<OrderDetail> OrderDetailRepository { get; }
+        IRepository<PaymentTransaction> PaymentTransactionRepository { get; }
         
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();

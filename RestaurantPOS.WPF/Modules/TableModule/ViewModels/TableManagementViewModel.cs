@@ -67,6 +67,7 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
         public DelegateCommand<TableViewModel> EditTableCommand { get; }
         public DelegateCommand<TableViewModel> DeleteTableCommand { get; }
         public DelegateCommand<TableViewModel> SelectTableCommand { get; }
+        public DelegateCommand NavigateToPaymentHistoryCommand { get; }
         public DelegateCommand NavigateToSettingsCommand { get; }
         
         // Selected Space
@@ -144,6 +145,7 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
             EditTableCommand = new DelegateCommand<TableViewModel>(OnEditTable, CanEditTable);
             DeleteTableCommand = new DelegateCommand<TableViewModel>(OnDeleteTable, CanDeleteTable);
             SelectTableCommand = new DelegateCommand<TableViewModel>(OnSelectTable);
+            NavigateToPaymentHistoryCommand = new DelegateCommand(OnNavigateToPaymentHistory);
             NavigateToSettingsCommand = new DelegateCommand(OnNavigateToSettings);
 
             // Setup timer for current time
@@ -410,6 +412,11 @@ namespace RestaurantPOS.WPF.Modules.TableModule.ViewModels
             SelectedTable = table;
         }
         
+        private void OnNavigateToPaymentHistory()
+        {
+            _regionManager.RequestNavigate("MainRegion", "PaymentHistoryView");
+        }
+
         private void OnNavigateToSettings()
         {
             _regionManager.RequestNavigate("MainRegion", "SettingsView");

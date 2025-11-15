@@ -20,6 +20,7 @@ using RestaurantPOS.WPF.Modules.TableModule;
 using RestaurantPOS.WPF.Modules.OrderModule;
 using RestaurantPOS.WPF.Modules.MenuModule;
 using RestaurantPOS.WPF.Modules.SettingsModule;
+using RestaurantPOS.WPF.Modules.PaymentHistoryModule;
 using RestaurantPOS.WPF.Views;
 using Serilog;
 using System;
@@ -66,6 +67,7 @@ namespace RestaurantPOS.WPF
             moduleCatalog.AddModule<OrderModule>();
             moduleCatalog.AddModule<MenuModule>();
             moduleCatalog.AddModule<SettingsModule>();
+            moduleCatalog.AddModule<PaymentHistoryModule>();
         }
 
         protected override void RegisterTypes(IContainerRegistry containerRegistry)
@@ -124,6 +126,8 @@ namespace RestaurantPOS.WPF
             containerRegistry.RegisterScoped<IOrderService, OrderService>();
             containerRegistry.RegisterSingleton<IPrintService, PrintService>();
             containerRegistry.RegisterScoped<IMenuManagementService, MenuManagementService>();
+            containerRegistry.RegisterScoped<IPaymentHistoryService, PaymentHistoryService>();
+            containerRegistry.RegisterSingleton<IPaymentSyncService, PaymentSyncService>();
             
             // Serilog ILogger 등록
             containerRegistry.RegisterInstance<ILogger>(Log.Logger);

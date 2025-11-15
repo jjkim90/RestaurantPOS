@@ -21,5 +21,11 @@ namespace RestaurantPOS.Core.Interfaces
         Task<OrderDTO> GetOrderWithDetailsAsync(int orderId);  // 상세 정보 포함한 주문 조회
         Task<IEnumerable<OrderDetailDTO>> GetPendingOrderDetailsAsync(int orderId);  // 대기 중인 주문 항목 조회
         Task<IEnumerable<OrderDetailDTO>> GetConfirmedOrderDetailsAsync(int orderId);  // 확정된 주문 항목 조회
+        
+        // 복합 결제 관련 메서드들
+        Task<OrderDTO> ProcessMultiPaymentAsync(int orderId, List<(string paymentMethod, decimal amount, string? paymentKey, string? transactionId)> payments);
+        Task<PaymentTransactionDTO> AddPaymentTransactionAsync(int orderId, string paymentMethod, decimal amount, string? paymentKey = null, string? transactionId = null);
+        Task<List<PaymentTransactionDTO>> GetOrderPaymentTransactionsAsync(int orderId);
+        Task<bool> HasCompletedPaymentsAsync(int orderId);
     }
 }
