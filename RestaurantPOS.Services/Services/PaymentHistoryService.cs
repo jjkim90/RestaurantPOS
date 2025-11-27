@@ -43,13 +43,21 @@ namespace RestaurantPOS.Services.Services
             if (!string.IsNullOrEmpty(filter.OrderStatus))
                 query = query.Where(o => o.Status == filter.OrderStatus);
 
-            // 결제 수단 필터
+            // 결제 수단 필터 - UI에서 "현금"/"카드"를 DB의 "Cash"/"Card"로 매핑
             if (!string.IsNullOrEmpty(filter.PaymentMethod))
+            {
+                var paymentMethod = filter.PaymentMethod switch
+                {
+                    "현금" => "Cash",
+                    "카드" => "Card",
+                    _ => filter.PaymentMethod
+                };
                 query = query.Where(o => o.PaymentTransactions.Any(pt => 
-                    pt.PaymentMethod == filter.PaymentMethod && pt.Status == "Completed"));
+                    pt.PaymentMethod == paymentMethod && pt.Status == "Completed"));
+            }
 
             // 동기화 오류 필터
-            if (filter.ShowOnlySyncErrors)
+            if (filter.ShowOnlySyncErrors || filter.ShowOnlySyncFailed)
                 query = query.Where(o => o.PaymentTransactions.Any(pt => pt.SyncStatus == "Failed"));
 
             // 총 개수

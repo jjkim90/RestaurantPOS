@@ -15,20 +15,526 @@
         </Grid.RowDefinitions>
         
         <!-- 헤더 영역 -->
-        <Border Grid.Row="0" Background="#2196F3" Padding="20">
-            <TextBlock Text="결제 내역 조회" 
-                       FontSize="24" 
-                       FontWeight="Bold" 
-                       Foreground="White"/>
+        <Border Grid.Row="0" Background="White" Padding="20">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- 제목 -->
+                <TextBlock Grid.Column="0" Text="결제 내역 조회" 
+                           FontSize="24" 
+                           FontWeight="Bold" 
+                           Foreground="#333333"/>
+                
+                <!-- 돌아가기 버튼 -->
+                <Button Grid.Column="1" 
+                        Content="돌아가기" 
+                        Command="{Binding BackCommand}"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Width="100"
+                        Height="40"
+                        FontSize="16"
+                        Background="#F0F0F0"
+                        Foreground="#333333"/>
+            </Grid>
         </Border>
         
-        <!-- 콘텐츠 영역 (다음 단계에서 구현) -->
-        <Grid Grid.Row="1" Margin="20">
-            <TextBlock Text="결제 내역 화면 - 단계 5에서 구현 예정" 
-                       HorizontalAlignment="Center" 
-                       VerticalAlignment="Center"
-                       FontSize="18"
-                       Foreground="Gray"/>
+        <!-- 콘텐츠 영역 -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" MinWidth="400"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="3*" MinWidth="600"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- 좌측 패널 - 주문 리스트 -->
+            <Border Grid.Column="0" Background="#F5F5F5" Margin="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- 필터 영역 -->
+                    <Border Grid.Row="0" Background="White" Margin="10" Padding="15" CornerRadius="5">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- 날짜 필터 -->
+                            <Grid Grid.Row="0" Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Grid.Column="0" Text="시작일:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <DatePicker Grid.Column="1" 
+                                            SelectedDate="{Binding StartDate}"
+                                            FontSize="14"/>
+                                
+                                <TextBlock Grid.Column="2" Text="종료일:" VerticalAlignment="Center" Margin="15,0,10,0"/>
+                                <DatePicker Grid.Column="3" 
+                                            SelectedDate="{Binding EndDate}"
+                                            FontSize="14"/>
+                            </Grid>
+                            
+                            <!-- 결제 수단 필터 -->
+                            <Grid Grid.Row="1" Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Grid.Column="0" Text="결제수단:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <ComboBox Grid.Column="1" 
+                                          ItemsSource="{Binding PaymentMethodOptions}"
+                                          SelectedItem="{Binding SelectedPaymentMethod}"
+                                          FontSize="14"/>
+                            </Grid>
+                            
+                            <!-- 동기화 실패 필터 -->
+                            <CheckBox Grid.Row="2" 
+                                      Content="동기화 실패 건만 보기" 
+                                      IsChecked="{Binding ShowOnlySyncFailed}"
+                                      FontSize="14"
+                                      Margin="0,0,0,10"/>
+                            
+                            <!-- 검색 버튼 -->
+                            <Button Grid.Row="3" 
+                                    Content="검색" 
+                                    Command="{Binding SearchCommand}"
+                                    Height="40"
+                                    FontSize="16"
+                                    Background="#2196F3"
+                                    Foreground="White"
+                                    FontWeight="Bold"/>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- 주문 리스트 -->
+                    <Border Grid.Row="1" Background="White" Margin="10,0,10,10" CornerRadius="5">
+                        <DataGrid ItemsSource="{Binding Orders}"
+                                  SelectedItem="{Binding SelectedOrder}"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  CanUserDeleteRows="False"
+                                  CanUserReorderColumns="False"
+                                  CanUserSortColumns="True"
+                                  IsReadOnly="True"
+                                  GridLinesVisibility="Horizontal"
+                                  HeadersVisibility="Column"
+                                  SelectionMode="Single"
+                                  FontSize="14">
+                            
+                            <DataGrid.Resources>
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="Height" Value="50"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasSyncError}" Value="True">
+                                            <Setter Property="Background" Value="#FFEBEE"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.Resources>
+                            
+                            <DataGrid.Columns>
+                                <!-- 동기화 상태 아이콘 -->
+                                <DataGridTemplateColumn Header="" Width="30">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="⚠️" 
+                                                       FontSize="16"
+                                                       ToolTip="동기화 실패"
+                                                       Visibility="{Binding HasSyncError, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                
+                                <!-- 주문번호 -->
+                                <DataGridTextColumn Header="주문번호" 
+                                                    Binding="{Binding OrderNumber}" 
+                                                    Width="120">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <Setter Property="Margin" Value="5,0"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                
+                                <!-- 시간 -->
+                                <DataGridTextColumn Header="시간" 
+                                                    Binding="{Binding OrderDate, StringFormat='{}{0:HH:mm}'}" 
+                                                    Width="60">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                
+                                <!-- 금액 -->
+                                <DataGridTextColumn Header="금액" 
+                                                    Binding="{Binding TotalAmount, StringFormat='{}{0:N0}원'}" 
+                                                    Width="100">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                                            <Setter Property="Margin" Value="0,0,10,0"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                
+                                <!-- 상태 -->
+                                <DataGridTextColumn Header="상태" 
+                                                    Binding="{Binding Status}" 
+                                                    Width="80">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="Text" Value="완료">
+                                                    <Setter Property="Foreground" Value="Green"/>
+                                                </Trigger>
+                                                <Trigger Property="Text" Value="취소">
+                                                    <Setter Property="Foreground" Value="Red"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                </Grid>
+            </Border>
+            
+            <!-- 구분선 -->
+            <GridSplitter Grid.Column="1" 
+                          Width="3" 
+                          HorizontalAlignment="Center" 
+                          VerticalAlignment="Stretch"
+                          Background="#E0E0E0"/>
+            
+            <!-- 우측 패널 - 상세 정보 -->
+            <Border Grid.Column="2" Background="#F5F5F5" Margin="10">
+                <Grid>
+                    <!-- 주문 선택 안내 메시지 -->
+                    <TextBlock Text="주문을 선택하세요" 
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center"
+                               FontSize="18"
+                               Foreground="Gray"
+                               Visibility="{Binding IsOrderSelected, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                    
+                    <!-- 주문 상세 정보 -->
+                    <Grid Visibility="{Binding IsOrderSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- 주문 정보 헤더 -->
+                        <Border Grid.Row="0" Background="White" Margin="10" Padding="20" CornerRadius="5">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <TextBlock Grid.Row="0" 
+                                           Text="{Binding SelectedOrder.OrderNumber, StringFormat='주문번호: {0}'}" 
+                                           FontSize="20" 
+                                           FontWeight="Bold"
+                                           Margin="0,0,0,10"/>
+                                
+                                <Grid Grid.Row="1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <TextBlock Grid.Column="0" 
+                                               Text="{Binding SelectedOrder.TableName, StringFormat='테이블: {0}'}" 
+                                               FontSize="16"/>
+                                    
+                                    <TextBlock Grid.Column="1" 
+                                               Text="{Binding SelectedOrder.OrderDate, StringFormat='시간: {0:yyyy-MM-dd HH:mm}'}" 
+                                               FontSize="16"
+                                               HorizontalAlignment="Right"/>
+                                </Grid>
+                                
+                                <Grid Grid.Row="2" Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <TextBlock Grid.Column="0" 
+                                               Text="{Binding SelectedOrder.TotalAmount, StringFormat='총 금액: {0:N0}원'}" 
+                                               FontSize="18" 
+                                               FontWeight="Bold"
+                                               Foreground="#2196F3"/>
+                                    
+                                    <Button Grid.Column="1" 
+                                            Content="영수증 재출력" 
+                                            Command="{Binding ReprintReceiptCommand}"
+                                            CommandParameter="{Binding SelectedOrder}"
+                                            Height="40"
+                                            Width="150"
+                                            FontSize="16"
+                                            Background="#4CAF50"
+                                            Foreground="White"/>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                        
+                        <!-- 메뉴 상세 내역 -->
+                        <Border Grid.Row="1" Background="White" Margin="10,0,10,10" Padding="20" CornerRadius="5">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                
+                                <TextBlock Grid.Row="0" 
+                                           Text="주문 메뉴" 
+                                           FontSize="18" 
+                                           FontWeight="Bold"
+                                           Margin="0,0,0,10"/>
+                                
+                                <DataGrid Grid.Row="1"
+                                          ItemsSource="{Binding SelectedOrder.OrderDetails}"
+                                          AutoGenerateColumns="False"
+                                          CanUserAddRows="False"
+                                          CanUserDeleteRows="False"
+                                          IsReadOnly="True"
+                                          GridLinesVisibility="None"
+                                          HeadersVisibility="Column"
+                                          FontSize="14">
+                                    
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="메뉴명" 
+                                                            Binding="{Binding MenuItemName}" 
+                                                            Width="*"/>
+                                        
+                                        <DataGridTextColumn Header="단가" 
+                                                            Binding="{Binding UnitPrice, StringFormat='{}{0:N0}원'}" 
+                                                            Width="100">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                                    <Setter Property="Margin" Value="0,0,10,0"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        
+                                        <DataGridTextColumn Header="수량" 
+                                                            Binding="{Binding Quantity}" 
+                                                            Width="60">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        
+                                        <DataGridTextColumn Header="금액" 
+                                                            Binding="{Binding SubTotal, StringFormat='{}{0:N0}원'}" 
+                                                            Width="100">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                                    <Setter Property="Margin" Value="0,0,10,0"/>
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </Border>
+                        
+                        <!-- 결제 정보 -->
+                        <Border Grid.Row="2" Background="White" Margin="10,0,10,10" Padding="20" CornerRadius="5">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                
+                                <TextBlock Grid.Row="0" 
+                                           Text="결제 내역" 
+                                           FontSize="18" 
+                                           FontWeight="Bold"
+                                           Margin="0,0,0,10"/>
+                                
+                                <ItemsControl Grid.Row="1" 
+                                              ItemsSource="{Binding SelectedOrder.PaymentTransactions}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#F5F5F5" 
+                                                    Margin="0,0,0,10" 
+                                                    Padding="15" 
+                                                    CornerRadius="5">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+                                                    
+                                                    <!-- 결제 정보 -->
+                                                    <Grid Grid.Row="0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        
+                                                        <!-- 동기화 상태 아이콘 -->
+                                                        <TextBlock Grid.Column="0" 
+                                                                   Text="⚠️" 
+                                                                   FontSize="16"
+                                                                   ToolTip="동기화 실패"
+                                                                   Visibility="{Binding NeedsSync, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                   Margin="0,0,10,0"/>
+                                                        
+                                                        <!-- 결제 수단 및 금액 -->
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding DisplayPaymentMethod}" 
+                                                                       FontSize="16" 
+                                                                       FontWeight="Bold"
+                                                                       Margin="0,0,10,0"/>
+                                                            <TextBlock Text="{Binding Amount, StringFormat='{}{0:N0}원'}" 
+                                                                       FontSize="16"/>
+                                                        </StackPanel>
+                                                        
+                                                        <!-- 상태 -->
+                                                        <TextBlock Grid.Column="2" 
+                                                                   Text="{Binding DisplayStatus}" 
+                                                                   FontSize="14"
+                                                                   VerticalAlignment="Center"
+                                                                   Margin="0,0,20,0">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Status}" Value="Completed">
+                                                                            <Setter Property="Foreground" Value="Green"/>
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding Status}" Value="Cancelled">
+                                                                            <Setter Property="Foreground" Value="Red"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                        
+                                                        <!-- 결제일시 -->
+                                                        <TextBlock Grid.Column="3" 
+                                                                   Text="{Binding PaymentDate, StringFormat='{}{0:MM/dd HH:mm}'}" 
+                                                                   FontSize="14"
+                                                                   Foreground="Gray"
+                                                                   VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                    
+                                                    <!-- 액션 버튼들 -->
+                                                    <StackPanel Grid.Row="1" 
+                                                                Orientation="Horizontal" 
+                                                                HorizontalAlignment="Right"
+                                                                Margin="0,10,0,0">
+                                                        
+                                                        <!-- 결제 취소 버튼 -->
+                                                        <Button Content="결제 취소" 
+                                                                Command="{Binding DataContext.CancelPaymentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Visibility="{Binding CanCancel, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                Height="35"
+                                                                Width="100"
+                                                                Margin="0,0,10,0"
+                                                                FontSize="14"
+                                                                Background="#F44336"
+                                                                Foreground="White"/>
+                                                        
+                                                        <!-- 재결제 버튼 -->
+                                                        <Button Content="재결제" 
+                                                                Command="{Binding DataContext.RetryPaymentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Visibility="{Binding CanRetry, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                Height="35"
+                                                                Width="100"
+                                                                FontSize="14"
+                                                                Background="#2196F3"
+                                                                Foreground="White"/>
+                                                        
+                                                        <!-- 동기화 재시도 버튼 -->
+                                                        <Button Content="동기화 재시도" 
+                                                                Command="{Binding DataContext.RetrySyncCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Visibility="{Binding NeedsSync, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                Height="35"
+                                                                Width="120"
+                                                                FontSize="14"
+                                                                Background="#FF9800"
+                                                                Foreground="White"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </Border>
+                        
+                        <!-- 요약 정보 -->
+                        <Border Grid.Row="3" Background="White" Margin="10,0,10,10" Padding="20" CornerRadius="5">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <TextBlock Grid.Row="0" 
+                                           Text="{Binding SelectedOrder.PaidAmount, StringFormat='결제 금액: {0:N0}원'}" 
+                                           FontSize="16"
+                                           Margin="0,0,0,5"/>
+                                
+                                <TextBlock Grid.Row="1" 
+                                           Text="{Binding SelectedOrder.CancelledAmount, StringFormat='취소 금액: {0:N0}원'}" 
+                                           FontSize="16"
+                                           Foreground="Red"
+                                           Margin="0,0,0,5"
+                                           Visibility="{Binding SelectedOrder.CancelledAmount, Converter={StaticResource ZeroToCollapsedConverter}}"/>
+                                
+                                <TextBlock Grid.Row="2" 
+                                           Text="{Binding SelectedOrder.PaymentMethodsSummary, StringFormat='결제 수단: {0}'}" 
+                                           FontSize="14"
+                                           Foreground="Gray"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Border>
         </Grid>
     </Grid>
 </UserControl>

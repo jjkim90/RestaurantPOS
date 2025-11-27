@@ -9,6 +9,7 @@ namespace RestaurantPOS.Core.DTOs
         public string? PaymentMethod { get; set; } // null=전체, "Cash"=현금, "Card"=카드
         public string? OrderStatus { get; set; } // null=전체, "Completed"=완료, "Cancelled"=취소
         public bool ShowOnlySyncErrors { get; set; } = false;
+        public bool ShowOnlySyncFailed { get; set; } = false; // UI와 일치시키기 위한 별칭
         public int PageNumber { get; set; } = 1;
         public int PageSize { get; set; } = 50;
         

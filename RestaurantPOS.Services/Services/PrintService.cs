@@ -21,6 +21,38 @@ namespace RestaurantPOS.Services
 
         public async Task<bool> PrintReceiptAsync(OrderDTO order)
         {
+            return await PrintReceiptInternalAsync(order, false);
+        }
+
+        public async Task<bool> ReprintReceiptAsync(OrderDTO order)
+        {
+            return await PrintReceiptInternalAsync(order, true);
+        }
+
+        public async Task<bool> PrintReceiptForPaymentHistoryAsync(PaymentHistoryDTO paymentHistory)
+        {
+            // PaymentHistoryDTO를 OrderDTO로 변환
+            var order = new OrderDTO
+            {
+                OrderId = paymentHistory.OrderId,
+                OrderNumber = paymentHistory.OrderNumber,
+                TableId = paymentHistory.TableId,
+                TableName = paymentHistory.TableName,
+                OrderDate = paymentHistory.OrderDate,
+                TotalAmount = paymentHistory.TotalAmount,
+                Status = paymentHistory.OrderStatus,
+                PaymentDate = paymentHistory.OrderDate,
+                PaymentMethod = paymentHistory.PaymentTransactions?.FirstOrDefault()?.PaymentMethod ?? "Cash",
+                OrderDetails = paymentHistory.OrderDetails,
+                // 복합 결제 정보를 위해 PaymentTransactions도 전달
+                PaymentTransactions = paymentHistory.PaymentTransactions
+            };
+
+            return await PrintReceiptInternalAsync(order, true, paymentHistory.PaymentTransactions);
+        }
+
+        private async Task<bool> PrintReceiptInternalAsync(OrderDTO order, bool isReprint, List<PaymentTransactionDTO> paymentTransactions = null)
+        {
             try
             {
                 // UI 스레드에서 실행되어야 함
@@ -30,7 +62,7 @@ namespace RestaurantPOS.Services
                 {
                     try
                     {
-                        var document = CreateReceiptDocument(order);
+                        var document = CreateReceiptDocument(order, isReprint, paymentTransactions);
                         var printDialog = new PrintDialog();
 
                         // 영수증 용지 크기 설정 (80mm x 297mm)
@@ -41,7 +73,7 @@ namespace RestaurantPOS.Services
                         // 다이얼로그 없이 기본 프린터로 바로 출력
                         printDialog.PrintDocument(
                             ((IDocumentPaginatorSource)document).DocumentPaginator,
-                            $"영수증 - {order.OrderNumber}");
+                            $"영수증 - {order.OrderNumber}{(isReprint ? " (재출력)" : "")}");
                         tcs.SetResult(true);
                     }
                     catch (Exception ex)
@@ -60,7 +92,7 @@ namespace RestaurantPOS.Services
             }
         }
 
-        private FlowDocument CreateReceiptDocument(OrderDTO order)
+        private FlowDocument CreateReceiptDocument(OrderDTO order, bool isReprint = false, List<PaymentTransactionDTO> paymentTransactions = null)
         {
             var document = new FlowDocument
             {
@@ -72,17 +104,26 @@ namespace RestaurantPOS.Services
                 FontSize = 10      // 폰트 크기 약간 축소
             };
 
-            AddHeader(document);
-            AddOrderInfo(document, order);
+            AddHeader(document, isReprint);
+            AddOrderInfo(document, order, isReprint);
             AddOrderDetails(document, order);
             AddTotalAmount(document, order);
-            AddPaymentInfo(document, order);
-            AddFooter(document);
+            
+            if (paymentTransactions != null && paymentTransactions.Any())
+            {
+                AddMultiPaymentInfo(document, paymentTransactions);
+            }
+            else
+            {
+                AddPaymentInfo(document, order);
+            }
+            
+            AddFooter(document, isReprint);
 
             return document;
         }
 
-        private void AddHeader(FlowDocument document)
+        private void AddHeader(FlowDocument document, bool isReprint = false)
         {
             var header = new Paragraph
             {
@@ -91,6 +132,12 @@ namespace RestaurantPOS.Services
             };
 
             header.Inlines.Add(new Run(SEPARATOR_LINE + "\n"));
+            
+            if (isReprint)
+            {
+                header.Inlines.Add(new Run("[ 재출력 ]\n") { FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Brushes.Red });
+            }
+            
             header.Inlines.Add(new Run(STORE_NAME) { FontSize = 16, FontWeight = FontWeights.Bold });
             header.Inlines.Add(new Run("\n" + STORE_PHONE));
             header.Inlines.Add(new Run("\n" + SEPARATOR_LINE));
@@ -98,7 +145,7 @@ namespace RestaurantPOS.Services
             document.Blocks.Add(header);
         }
 
-        private void AddOrderInfo(FlowDocument document, OrderDTO order)
+        private void AddOrderInfo(FlowDocument document, OrderDTO order, bool isReprint = false)
         {
             var info = new Paragraph
             {
@@ -107,7 +154,12 @@ namespace RestaurantPOS.Services
 
             info.Inlines.Add(new Run($"주문번호: {order.OrderNumber}\n"));
             info.Inlines.Add(new Run($"테이블: {order.TableName}\n"));
-            info.Inlines.Add(new Run($"일시: {order.OrderDate:yyyy-MM-dd HH:mm:ss}"));
+            info.Inlines.Add(new Run($"주문일시: {order.OrderDate:yyyy-MM-dd HH:mm:ss}"));
+            
+            if (isReprint)
+            {
+                info.Inlines.Add(new Run($"\n재출력시간: {DateTime.Now:yyyy-MM-dd HH:mm:ss}") { Foreground = Brushes.Red });
+            }
 
             document.Blocks.Add(info);
             document.Blocks.Add(new Paragraph(new Run(DASH_LINE)));
@@ -207,7 +259,61 @@ namespace RestaurantPOS.Services
             document.Blocks.Add(payment);
         }
 
-        private void AddFooter(FlowDocument document)
+        private void AddMultiPaymentInfo(FlowDocument document, List<PaymentTransactionDTO> paymentTransactions)
+        {
+            var payment = new Paragraph
+            {
+                Margin = new Thickness(0, 5, 0, 5),
+                FontWeight = FontWeights.Bold
+            };
+
+            payment.Inlines.Add(new Run("결제 내역\n"));
+            document.Blocks.Add(payment);
+
+            foreach (var transaction in paymentTransactions.Where(t => t.Status == "Completed"))
+            {
+                var transInfo = new Paragraph
+                {
+                    Margin = new Thickness(0, 2, 0, 2)
+                };
+
+                var method = transaction.DisplayPaymentMethod;
+                var amount = transaction.Amount.ToString("N0");
+                var date = transaction.PaymentDate.ToString("MM/dd HH:mm");
+                
+                transInfo.Inlines.Add(new Run($"{method}: {amount}원 ({date})"));
+                document.Blocks.Add(transInfo);
+            }
+
+            // 취소된 결제가 있는 경우
+            var cancelledTransactions = paymentTransactions.Where(t => t.Status == "Cancelled").ToList();
+            if (cancelledTransactions.Any())
+            {
+                document.Blocks.Add(new Paragraph(new Run("\n취소된 결제"))
+                {
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.Red
+                });
+
+                foreach (var transaction in cancelledTransactions)
+                {
+                    var transInfo = new Paragraph
+                    {
+                        Margin = new Thickness(0, 2, 0, 2),
+                        Foreground = Brushes.Red
+                    };
+
+                    var method = transaction.DisplayPaymentMethod;
+                    var amount = transaction.Amount.ToString("N0");
+                    var date = transaction.CancelledDate?.ToString("MM/dd HH:mm") ?? "";
+                    
+                    transInfo.Inlines.Add(new Run($"{method}: {amount}원 (취소: {date})"));
+                    document.Blocks.Add(transInfo);
+                }
+            }
+        }
+
+        private void AddFooter(FlowDocument document, bool isReprint = false)
         {
             var footer = new Paragraph
             {
@@ -216,6 +322,12 @@ namespace RestaurantPOS.Services
             };
 
             footer.Inlines.Add(new Run(SEPARATOR_LINE + "\n"));
+            
+            if (isReprint)
+            {
+                footer.Inlines.Add(new Run("[ 재출력 영수증 ]\n") { FontWeight = FontWeights.Bold, Foreground = Brushes.Red });
+            }
+            
             footer.Inlines.Add(new Run("감사합니다") { FontSize = 14 });
             footer.Inlines.Add(new Run("\n" + SEPARATOR_LINE));
 

@@ -12,8 +12,8 @@ using RestaurantPOS.Data.Context;
 namespace RestaurantPOS.Data.Migrations
 {
     [DbContext(typeof(RestaurantContext))]
-    [Migration("20250731075925_AddPaymentTransaction")]
-    partial class AddPaymentTransaction
+    [Migration("20250731094725_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

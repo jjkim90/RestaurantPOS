@@ -18,6 +18,7 @@ namespace RestaurantPOS.Core.DTOs
         public string? TransactionId { get; set; }  // 거래 ID
         public bool IsPrinted { get; set; }
         public List<OrderDetailDTO> OrderDetails { get; set; } = new List<OrderDetailDTO>();
+        public List<PaymentTransactionDTO>? PaymentTransactions { get; set; }  // 복합 결제 정보
     }
 
     public class OrderDetailDTO

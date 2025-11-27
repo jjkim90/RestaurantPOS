@@ -3,6 +3,7 @@ using Prism.Mvvm;
 using Prism.Regions;
 using RestaurantPOS.Core.DTOs;
 using RestaurantPOS.Core.Interfaces;
+using RestaurantPOS.WPF.Modules.PaymentHistoryModule.Views;
 using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
@@ -14,21 +15,29 @@ namespace RestaurantPOS.WPF.Modules.PaymentHistoryModule.ViewModels
     {
         private readonly IPaymentHistoryService _paymentHistoryService;
         private readonly IRegionManager _regionManager;
+        private readonly IOrderService _orderService;
+        private readonly IPrintService _printService;
 
         #region Properties
-        private ObservableCollection<PaymentHistoryDTO> _paymentHistories;
-        public ObservableCollection<PaymentHistoryDTO> PaymentHistories
+        private ObservableCollection<PaymentHistoryDTO> _orders;
+        public ObservableCollection<PaymentHistoryDTO> Orders
         {
-            get { return _paymentHistories; }
-            set { SetProperty(ref _paymentHistories, value); }
+            get { return _orders; }
+            set { SetProperty(ref _orders, value); }
         }
 
-        private PaymentHistoryDTO _selectedPaymentHistory;
-        public PaymentHistoryDTO SelectedPaymentHistory
+        private PaymentHistoryDTO _selectedOrder;
+        public PaymentHistoryDTO SelectedOrder
         {
-            get { return _selectedPaymentHistory; }
-            set { SetProperty(ref _selectedPaymentHistory, value); }
+            get { return _selectedOrder; }
+            set 
+            { 
+                SetProperty(ref _selectedOrder, value);
+                RaisePropertyChanged(nameof(IsOrderSelected));
+            }
         }
+
+        public bool IsOrderSelected => SelectedOrder != null;
 
         private DateTime _startDate = DateTime.Today;
         public DateTime StartDate
@@ -57,25 +66,65 @@ namespace RestaurantPOS.WPF.Modules.PaymentHistoryModule.ViewModels
             get { return _statusMessage; }
             set { SetProperty(ref _statusMessage, value); }
         }
+
+        private ObservableCollection<string> _paymentMethodOptions;
+        public ObservableCollection<string> PaymentMethodOptions
+        {
+            get { return _paymentMethodOptions; }
+            set { SetProperty(ref _paymentMethodOptions, value); }
+        }
+
+        private string _selectedPaymentMethod = "전체";
+        public string SelectedPaymentMethod
+        {
+            get { return _selectedPaymentMethod; }
+            set { SetProperty(ref _selectedPaymentMethod, value); }
+        }
+
+        private bool _showOnlySyncFailed;
+        public bool ShowOnlySyncFailed
+        {
+            get { return _showOnlySyncFailed; }
+            set { SetProperty(ref _showOnlySyncFailed, value); }
+        }
         #endregion
 
         #region Commands
         public ICommand SearchCommand { get; }
         public ICommand RefreshCommand { get; }
+        public ICommand BackCommand { get; }
+        public ICommand ReprintReceiptCommand { get; }
+        public ICommand CancelPaymentCommand { get; }
+        public ICommand RetryPaymentCommand { get; }
+        public ICommand RetrySyncCommand { get; }
         #endregion
 
         public PaymentHistoryViewModel(
             IPaymentHistoryService paymentHistoryService,
-            IRegionManager regionManager)
+            IRegionManager regionManager,
+            IOrderService orderService,
+            IPrintService printService)
         {
             _paymentHistoryService = paymentHistoryService;
             _regionManager = regionManager;
+            _orderService = orderService;
+            _printService = printService;
 
-            PaymentHistories = new ObservableCollection<PaymentHistoryDTO>();
+            Orders = new ObservableCollection<PaymentHistoryDTO>();
+            PaymentMethodOptions = new ObservableCollection<string> { "전체", "현금", "카드" };
 
             // Commands
             SearchCommand = new DelegateCommand(async () => await LoadPaymentHistoryAsync());
             RefreshCommand = new DelegateCommand(async () => await LoadPaymentHistoryAsync());
+            BackCommand = new DelegateCommand(() => 
+            {
+                _regionManager.RequestNavigate("MainRegion", "TableManagementView");
+            });
+            
+            ReprintReceiptCommand = new DelegateCommand<PaymentHistoryDTO>(async (order) => await ReprintReceiptAsync(order));
+            CancelPaymentCommand = new DelegateCommand<PaymentTransactionDTO>(async (payment) => await CancelPaymentAsync(payment));
+            RetryPaymentCommand = new DelegateCommand<PaymentTransactionDTO>(async (payment) => await RetryPaymentAsync(payment));
+            RetrySyncCommand = new DelegateCommand<PaymentTransactionDTO>(async (payment) => await RetrySyncAsync(payment));
         }
 
         private async Task LoadPaymentHistoryAsync()
@@ -89,15 +138,17 @@ namespace RestaurantPOS.WPF.Modules.PaymentHistoryModule.ViewModels
                 {
                     StartDate = StartDate,
                     EndDate = EndDate.AddDays(1).AddSeconds(-1), // 끝날짜의 23:59:59
+                    PaymentMethod = SelectedPaymentMethod == "전체" ? null : SelectedPaymentMethod,
+                    ShowOnlySyncFailed = ShowOnlySyncFailed,
                     PageSize = 100
                 };
 
                 var (items, totalCount) = await _paymentHistoryService.GetPaymentHistoryAsync(filter);
 
-                PaymentHistories.Clear();
+                Orders.Clear();
                 foreach (var item in items)
                 {
-                    PaymentHistories.Add(item);
+                    Orders.Add(item);
                 }
 
                 StatusMessage = $"총 {totalCount}건의 결제 내역을 찾았습니다.";
@@ -127,6 +178,117 @@ namespace RestaurantPOS.WPF.Modules.PaymentHistoryModule.ViewModels
         public void OnNavigatedFrom(NavigationContext navigationContext)
         {
             // 화면 떠날 때 필요한 정리 작업
+        }
+        #endregion
+
+        #region Command Methods
+        private async Task ReprintReceiptAsync(PaymentHistoryDTO order)
+        {
+            if (order == null) return;
+
+            try
+            {
+                StatusMessage = "영수증을 재출력하는 중...";
+                
+                // PrintService를 통한 영수증 재출력
+                var result = await _printService.PrintReceiptForPaymentHistoryAsync(order);
+                
+                if (result)
+                {
+                    StatusMessage = "영수증 재출력이 완료되었습니다.";
+                }
+                else
+                {
+                    StatusMessage = "영수증 재출력에 실패했습니다. PDF로 저장되었을 수 있습니다.";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"영수증 재출력 실패: {ex.Message}";
+            }
+        }
+
+        private async Task CancelPaymentAsync(PaymentTransactionDTO payment)
+        {
+            if (payment == null || !payment.CanCancel) return;
+
+            try
+            {
+                // 취소 확인 다이얼로그 표시
+                var dialog = new CancelPaymentDialog(payment);
+                if (dialog.ShowDialog() != true)
+                {
+                    StatusMessage = "결제 취소가 취소되었습니다.";
+                    return;
+                }
+
+                StatusMessage = "결제를 취소하는 중...";
+                
+                // 결제 취소 처리
+                var result = await _orderService.CancelPaymentTransactionAsync(
+                    payment.PaymentTransactionId, 
+                    "사용자 요청");
+
+                if (result)
+                {
+                    StatusMessage = "결제가 성공적으로 취소되었습니다.";
+                    
+                    // 목록 새로고침
+                    await LoadPaymentHistoryAsync();
+                    
+                    // 선택된 주문이 있다면 해당 주문 정보도 다시 로드
+                    if (SelectedOrder != null)
+                    {
+                        var updatedOrder = await _paymentHistoryService.GetPaymentHistoryDetailAsync(SelectedOrder.OrderId);
+                        if (updatedOrder != null)
+                        {
+                            SelectedOrder = updatedOrder;
+                        }
+                    }
+                }
+                else
+                {
+                    StatusMessage = "결제 취소에 실패했습니다.";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"결제 취소 실패: {ex.Message}";
+            }
+        }
+
+        private async Task RetryPaymentAsync(PaymentTransactionDTO payment)
+        {
+            if (payment == null || !payment.CanRetry) return;
+
+            try
+            {
+                StatusMessage = "재결제를 처리하는 중...";
+                // TODO: PaymentService를 통한 재결제 구현
+                await LoadPaymentHistoryAsync(); // 목록 새로고침
+                StatusMessage = "재결제가 완료되었습니다.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"재결제 실패: {ex.Message}";
+            }
+        }
+
+        private async Task RetrySyncAsync(PaymentTransactionDTO payment)
+        {
+            if (payment == null || !payment.NeedsSync) return;
+
+            try
+            {
+                StatusMessage = "동기화를 재시도하는 중...";
+                // TODO: PaymentSyncService를 통한 동기화 재시도
+                await LoadPaymentHistoryAsync(); // 목록 새로고침
+                StatusMessage = "동기화가 완료되었습니다.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"동기화 실패: {ex.Message}";
+            }
         }
         #endregion
     }

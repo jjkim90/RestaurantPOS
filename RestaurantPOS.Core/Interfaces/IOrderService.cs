@@ -27,5 +27,8 @@ namespace RestaurantPOS.Core.Interfaces
         Task<PaymentTransactionDTO> AddPaymentTransactionAsync(int orderId, string paymentMethod, decimal amount, string? paymentKey = null, string? transactionId = null);
         Task<List<PaymentTransactionDTO>> GetOrderPaymentTransactionsAsync(int orderId);
         Task<bool> HasCompletedPaymentsAsync(int orderId);
+        
+        // 결제 취소 관련 메서드
+        Task<bool> CancelPaymentTransactionAsync(int paymentTransactionId, string reason);
     }
 }

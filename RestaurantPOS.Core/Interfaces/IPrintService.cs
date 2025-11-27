@@ -8,5 +8,7 @@ namespace RestaurantPOS.Core.Interfaces
     {
         Task<bool> PrintReceiptAsync(OrderDTO order);
         Task<bool> PrintKitchenOrderAsync(OrderDTO order, IEnumerable<OrderDetailDTO> newItems);
+        Task<bool> ReprintReceiptAsync(OrderDTO order);
+        Task<bool> PrintReceiptForPaymentHistoryAsync(PaymentHistoryDTO paymentHistory);
     }
 }

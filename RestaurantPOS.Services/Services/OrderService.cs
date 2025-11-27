@@ -16,12 +16,14 @@ namespace RestaurantPOS.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IPrintService _printService;
+        private readonly ITossPaymentsService? _tossPaymentsService;
 
-        public OrderService(IUnitOfWork unitOfWork, IMapper mapper, IPrintService printService)
+        public OrderService(IUnitOfWork unitOfWork, IMapper mapper, IPrintService printService, ITossPaymentsService? tossPaymentsService = null)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _printService = printService;
+            _tossPaymentsService = tossPaymentsService;
         }
 
         public async Task<OrderDTO> CreateOrderAsync(int tableId, OrderItemDTO[] orderItems)
@@ -440,6 +442,72 @@ namespace RestaurantPOS.Services
         {
             return await _unitOfWork.PaymentTransactionRepository.Query()
                 .AnyAsync(pt => pt.OrderId == orderId && pt.Status == "Completed");
+        }
+
+        public async Task<bool> CancelPaymentTransactionAsync(int paymentTransactionId, string reason)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            
+            try
+            {
+                var transaction = await _unitOfWork.PaymentTransactionRepository.GetByIdAsync(paymentTransactionId);
+                if (transaction == null)
+                    throw new InvalidOperationException($"결제 내역 {paymentTransactionId}을(를) 찾을 수 없습니다.");
+
+                // 취소 가능 여부 확인
+                if (transaction.Status != "Completed")
+                    throw new InvalidOperationException("완료된 결제만 취소할 수 있습니다.");
+
+                if (transaction.SyncStatus != "Synced")
+                    throw new InvalidOperationException("동기화되지 않은 결제는 취소할 수 없습니다.");
+
+                // 토스페이먼츠 결제인 경우 API 호출
+                if (!string.IsNullOrEmpty(transaction.PaymentKey) && _tossPaymentsService != null)
+                {
+                    var cancelResponse = await _tossPaymentsService.CancelPaymentAsync(
+                        transaction.PaymentKey, 
+                        reason, 
+                        transaction.Amount);
+                    
+                    // API 응답이 성공이 아닌 경우 처리
+                    if (cancelResponse.Status != "CANCELED")
+                    {
+                        throw new InvalidOperationException($"결제 취소 실패: {cancelResponse.Status}");
+                    }
+                }
+
+                // DB 업데이트
+                transaction.Status = "Cancelled";
+                transaction.CancelledDate = DateTime.Now;
+                transaction.CancelReason = reason;
+                transaction.UpdatedAt = DateTime.Now;
+                
+                _unitOfWork.PaymentTransactionRepository.Update(transaction);
+
+                // 해당 주문의 모든 결제가 취소되었는지 확인
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(transaction.OrderId);
+                var remainingPayments = await _unitOfWork.PaymentTransactionRepository.Query()
+                    .Where(pt => pt.OrderId == transaction.OrderId && pt.Status == "Completed")
+                    .AnyAsync();
+
+                if (!remainingPayments)
+                {
+                    // 모든 결제가 취소된 경우 주문 상태 업데이트
+                    order.Status = "Cancelled";
+                    order.UpdatedAt = DateTime.Now;
+                    _unitOfWork.OrderRepository.Update(order);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw new InvalidOperationException($"결제 취소 중 오류 발생: {ex.Message}", ex);
+            }
         }
     }
 }

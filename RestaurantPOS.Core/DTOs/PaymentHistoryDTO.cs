@@ -32,7 +32,7 @@ namespace RestaurantPOS.Core.DTOs
         public bool HasSyncError => PaymentTransactions
             .Any(pt => pt.SyncStatus == "Failed");
             
-        public string DisplayOrderStatus => OrderStatus switch
+        public string Status => OrderStatus switch
         {
             "Pending" => "대기중",
             "Confirmed" => "확정됨",
