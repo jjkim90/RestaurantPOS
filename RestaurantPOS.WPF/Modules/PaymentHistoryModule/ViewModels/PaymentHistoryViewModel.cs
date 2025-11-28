@@ -17,6 +17,7 @@ namespace RestaurantPOS.WPF.Modules.PaymentHistoryModule.ViewModels
         private readonly IRegionManager _regionManager;
         private readonly IOrderService _orderService;
         private readonly IPrintService _printService;
+        private readonly ITossPaymentsService? _tossPaymentsService;
 
         #region Properties
         private ObservableCollection<PaymentHistoryDTO> _orders;
@@ -103,12 +104,14 @@ namespace RestaurantPOS.WPF.Modules.PaymentHistoryModule.ViewModels
             IPaymentHistoryService paymentHistoryService,
             IRegionManager regionManager,
             IOrderService orderService,
-            IPrintService printService)
+            IPrintService printService,
+            ITossPaymentsService? tossPaymentsService = null)
         {
             _paymentHistoryService = paymentHistoryService;
             _regionManager = regionManager;
             _orderService = orderService;
             _printService = printService;
+            _tossPaymentsService = tossPaymentsService;
 
             Orders = new ObservableCollection<PaymentHistoryDTO>();
             PaymentMethodOptions = new ObservableCollection<string> { "전체", "현금", "카드" };
@@ -263,14 +266,71 @@ namespace RestaurantPOS.WPF.Modules.PaymentHistoryModule.ViewModels
 
             try
             {
-                StatusMessage = "재결제를 처리하는 중...";
-                // TODO: PaymentService를 통한 재결제 구현
-                await LoadPaymentHistoryAsync(); // 목록 새로고침
-                StatusMessage = "재결제가 완료되었습니다.";
+                // 재결제 다이얼로그 표시
+                var dialog = new RetryPaymentDialog(payment);
+                if (dialog.ShowDialog() != true)
+                {
+                    StatusMessage = "재결제가 취소되었습니다.";
+                    return;
+                }
+
+                var newPaymentMethod = dialog.GetSelectedPaymentMethod();
+                StatusMessage = $"{(newPaymentMethod == "Cash" ? "현금" : "카드")}으로 재결제를 처리하는 중...";
+
+                if (newPaymentMethod == "Cash")
+                {
+                    // 현금 결제는 바로 처리
+                    var result = await _orderService.RetryPaymentAsync(
+                        payment.PaymentTransactionId,
+                        newPaymentMethod);
+
+                    if (result != null)
+                    {
+                        StatusMessage = "현금 재결제가 완료되었습니다.";
+                        await RefreshAfterPaymentChange();
+                    }
+                }
+                else // Card
+                {
+                    // 카드 재결제는 토스페이먼츠 연동이 필요하므로 일단 간단히 처리
+                    // TODO: 실제 카드 결제 창 연동 필요
+                    StatusMessage = "카드 재결제 기능은 준비 중입니다. 현금 재결제를 이용해주세요.";
+                    
+                    // 테스트를 위해 임시로 카드 재결제도 바로 처리
+                    /*
+                    var result = await _orderService.RetryPaymentAsync(
+                        payment.PaymentTransactionId,
+                        newPaymentMethod,
+                        "test_payment_key",
+                        "test_transaction_id");
+
+                    if (result != null)
+                    {
+                        StatusMessage = "카드 재결제가 완료되었습니다 (테스트).";
+                        await RefreshAfterPaymentChange();
+                    }
+                    */
+                }
             }
             catch (Exception ex)
             {
                 StatusMessage = $"재결제 실패: {ex.Message}";
+            }
+        }
+
+        private async Task RefreshAfterPaymentChange()
+        {
+            // 목록 새로고침
+            await LoadPaymentHistoryAsync();
+            
+            // 선택된 주문이 있다면 해당 주문 정보도 다시 로드
+            if (SelectedOrder != null)
+            {
+                var updatedOrder = await _paymentHistoryService.GetPaymentHistoryDetailAsync(SelectedOrder.OrderId);
+                if (updatedOrder != null)
+                {
+                    SelectedOrder = updatedOrder;
+                }
             }
         }
 

@@ -16,6 +16,8 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         private string _selectedPaymentMethod;
         private readonly ITossPaymentsService? _tossPaymentsService;
         private Window _paymentWindow;
+        private bool _isRetryMode = false;
+        private int _retryTransactionId = 0;
         
         public event EventHandler<PaymentCompletedEventArgs> PaymentCompleted;
         public event EventHandler PaymentCancelled;
@@ -210,6 +212,12 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
         private void OnCancel()
         {
             PaymentCancelled?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void SetRetryMode(int retryTransactionId)
+        {
+            _isRetryMode = true;
+            _retryTransactionId = retryTransactionId;
         }
     }
 

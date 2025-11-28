@@ -30,5 +30,8 @@ namespace RestaurantPOS.Core.Interfaces
         
         // 결제 취소 관련 메서드
         Task<bool> CancelPaymentTransactionAsync(int paymentTransactionId, string reason);
+        
+        // 재결제 관련 메서드
+        Task<PaymentTransactionDTO> RetryPaymentAsync(int cancelledTransactionId, string newPaymentMethod, string? paymentKey = null, string? transactionId = null);
     }
 }

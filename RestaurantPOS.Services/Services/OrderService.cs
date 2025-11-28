@@ -509,5 +509,66 @@ namespace RestaurantPOS.Services
                 throw new InvalidOperationException($"결제 취소 중 오류 발생: {ex.Message}", ex);
             }
         }
+
+        public async Task<PaymentTransactionDTO> RetryPaymentAsync(int cancelledTransactionId, string newPaymentMethod, string? paymentKey = null, string? transactionId = null)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            
+            try
+            {
+                // 취소된 트랜잭션 조회
+                var cancelledTransaction = await _unitOfWork.PaymentTransactionRepository.GetByIdAsync(cancelledTransactionId);
+                if (cancelledTransaction == null)
+                    throw new InvalidOperationException($"결제 내역 {cancelledTransactionId}을(를) 찾을 수 없습니다.");
+
+                // 취소된 결제인지 확인
+                if (cancelledTransaction.Status != "Cancelled")
+                    throw new InvalidOperationException("취소된 결제만 재결제할 수 있습니다.");
+
+                // 이미 재결제된 건인지 확인
+                var existingRetry = await _unitOfWork.PaymentTransactionRepository.Query()
+                    .AnyAsync(pt => pt.ReferenceTransactionId == cancelledTransactionId && pt.Status == "Completed");
+                
+                if (existingRetry)
+                    throw new InvalidOperationException("이미 재결제가 완료된 건입니다.");
+
+                // 새로운 결제 트랜잭션 생성
+                var newTransaction = new PaymentTransaction
+                {
+                    OrderId = cancelledTransaction.OrderId,
+                    PaymentMethod = newPaymentMethod,
+                    Amount = cancelledTransaction.Amount,
+                    PaymentKey = paymentKey,
+                    TransactionId = transactionId,
+                    Status = "Completed",
+                    SyncStatus = "Synced",
+                    PaymentDate = DateTime.Now,
+                    ReferenceTransactionId = cancelledTransactionId, // 원래 취소 건 참조
+                    CreatedAt = DateTime.Now
+                };
+
+                await _unitOfWork.PaymentTransactionRepository.AddAsync(newTransaction);
+
+                // 주문 상태 확인 및 업데이트
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(cancelledTransaction.OrderId);
+                if (order.Status == "Cancelled")
+                {
+                    // 전체 취소된 주문이 재결제되면 다시 완료 상태로
+                    order.Status = "Completed";
+                    order.UpdatedAt = DateTime.Now;
+                    _unitOfWork.OrderRepository.Update(order);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return _mapper.Map<PaymentTransactionDTO>(newTransaction);
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw new InvalidOperationException($"재결제 중 오류 발생: {ex.Message}", ex);
+            }
+        }
     }
 }
