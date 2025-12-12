@@ -448,7 +448,7 @@ namespace RestaurantPOS.Services
             table.TableStatus = TableStatus.Reserved;
             table.UpdatedAt = DateTime.Now;
 
-            // TODO: 예약 정보 저장 (Reservation 엔티티 필요)
+            // TODO: [Future Feature] 예약 정보 저장 (Reservation 엔티티 필요) - v2.0에서 예약 시스템 구현 예정
 
             _unitOfWork.TableRepository.Update(table);
             await _unitOfWork.SaveChangesAsync();

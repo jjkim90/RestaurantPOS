@@ -57,9 +57,9 @@ namespace RestaurantPOS.WPF
             ExitCommand = new DelegateCommand(() => System.Windows.Application.Current.Shutdown());
             NavigateTableCommand = new DelegateCommand(NavigateToTable);
             NavigateMenuCommand = new DelegateCommand(NavigateToMenu);
-            NavigateEmployeeCommand = new DelegateCommand(() => { /* TODO: Navigate to employee module */ });
-            DailySalesCommand = new DelegateCommand(() => { /* TODO: Show daily sales */ });
-            MonthlySalesCommand = new DelegateCommand(() => { /* TODO: Show monthly sales */ });
+            NavigateEmployeeCommand = new DelegateCommand(() => { /* TODO: [Future Feature] 직원 관리 모듈 - v2.0 */ });
+            DailySalesCommand = new DelegateCommand(() => { /* TODO: [Future Feature] 일별 매출 통계 - v2.0 */ });
+            MonthlySalesCommand = new DelegateCommand(() => { /* TODO: [Future Feature] 월별 매출 통계 - v2.0 */ });
             AboutCommand = new DelegateCommand(ShowAbout);
 
             // Setup timer for current time

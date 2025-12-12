@@ -178,11 +178,7 @@ namespace RestaurantPOS.WPF
                 System.Diagnostics.Debug.WriteLine("Empty Configuration registered as fallback");
             }
             
-            // TossPaymentsService 등록은 아직 비활성화 상태 유지
-            // TODO: Configuration 등록이 정상 작동 확인 후 다음 단계에서 활성화
-            /*
-            containerRegistry.RegisterScoped<ITossPaymentsService, TossPaymentsService>();
-            */
+            // TossPaymentsService는 필요할 때 수동으로 등록
 
             // Views 등록
             containerRegistry.RegisterForNavigation<MainWindow>(nameof(MainWindow));

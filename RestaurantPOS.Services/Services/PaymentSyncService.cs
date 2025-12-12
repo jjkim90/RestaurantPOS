@@ -92,7 +92,7 @@ namespace RestaurantPOS.Services.Services
                 _logger.Error(ex, "트랜잭션 {TransactionId} 재시도 실패", paymentTransactionId);
                 
                 // 재시도 횟수 확인 후 최종 실패 처리
-                // TODO: 재시도 횟수 추적 로직 추가
+                // TODO: [Enhancement] 재시도 횟수 추적 로직 추가 - 향후 개선사항
                 
                 return false;
             }

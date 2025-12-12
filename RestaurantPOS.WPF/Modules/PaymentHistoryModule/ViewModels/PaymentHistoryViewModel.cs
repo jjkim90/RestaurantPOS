@@ -293,7 +293,7 @@ namespace RestaurantPOS.WPF.Modules.PaymentHistoryModule.ViewModels
                 else // Card
                 {
                     // 카드 재결제는 토스페이먼츠 연동이 필요하므로 일단 간단히 처리
-                    // TODO: 실제 카드 결제 창 연동 필요
+                    // TODO: [Future Feature] 실제 카드 결제 창 연동 필요 - v2.0에서 구현 예정
                     StatusMessage = "카드 재결제 기능은 준비 중입니다. 현금 재결제를 이용해주세요.";
                     
                     // 테스트를 위해 임시로 카드 재결제도 바로 처리
@@ -341,7 +341,7 @@ namespace RestaurantPOS.WPF.Modules.PaymentHistoryModule.ViewModels
             try
             {
                 StatusMessage = "동기화를 재시도하는 중...";
-                // TODO: PaymentSyncService를 통한 동기화 재시도
+                // TODO: [Future Feature] PaymentSyncService를 통한 동기화 재시도 - v2.0에서 구현 예정
                 await LoadPaymentHistoryAsync(); // 목록 새로고침
                 StatusMessage = "동기화가 완료되었습니다.";
             }

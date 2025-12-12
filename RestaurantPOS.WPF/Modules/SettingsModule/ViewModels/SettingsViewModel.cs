@@ -71,7 +71,7 @@ namespace RestaurantPOS.WPF.Modules.SettingsModule.ViewModels
         private void NavigateToSystemSettings()
         {
             UpdateSelectedMenu("SystemSettings");
-            // TODO: Navigate to system settings when implemented
+            // TODO: [Future Feature] 시스템 설정 화면 구현 예정 - v2.0
         }
 
         private void UpdateSelectedMenu(string menuName)
