@@ -41,9 +41,13 @@
                         <TextBlock Grid.Column="0" Text="{Binding TableDisplayName}" 
                                    FontSize="20" FontWeight="Bold" Margin="10,5"/>
                         
-                        <dx:SimpleButton Grid.Column="2" Content="테이블 화면으로" 
+                        <dx:SimpleButton Grid.Column="2" 
+                                         Content="돌아가기" 
                                          Command="{Binding BackToTableCommand}"
-                                         Glyph="{dx:DXImage Image=Backward_16x16.png}"
+                                         Width="150"
+                                         Height="60"
+                                         FontSize="18"
+                                         Glyph="{dx:DXImage Image=Backward_32x32.png}"
                                          Margin="5"/>
                     </Grid>
                 </dxlc:GroupBox>
@@ -170,6 +174,8 @@
                                                 <dxg:TableView ShowGroupPanel="False"
                                                                AllowEditing="False"
                                                                AutoWidth="True"
+                                                               ShowIndicator="False"
+                                                               NavigationStyle="Row"
                                                                RowStyle="{StaticResource ExistingOrderRowStyle}"/>
                                             </dxg:GridControl.View>
                                             
@@ -200,12 +206,14 @@
                                             <dxg:GridControl.View>
                                                 <dxg:TableView ShowGroupPanel="False"
                                                                AllowEditing="False"
-                                                               AutoWidth="True"/>
+                                                               AutoWidth="True"
+                                                               ShowIndicator="False"
+                                                               NavigationStyle="Row"/>
                                             </dxg:GridControl.View>
                                             
-                                            <dxg:GridColumn FieldName="MenuItemName" Header="메뉴명" Width="200" MinWidth="150"/>
+                                            <dxg:GridColumn FieldName="MenuItemName" Header="메뉴명" Width="130" MinWidth="100"/>
                                             <dxg:GridColumn FieldName="UnitPrice" Header="단가" Width="80" Visible="False"/>
-                                            <dxg:GridColumn FieldName="Quantity" Header="수량" Width="60">
+                                            <dxg:GridColumn FieldName="Quantity" Header="수량" Width="120">
                                                 <dxg:GridColumn.CellTemplate>
                                                     <DataTemplate>
                                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -233,7 +241,7 @@
                                                     <dxe:TextEditSettings DisplayFormat="N0" Mask="n0"/>
                                                 </dxg:GridColumn.EditSettings>
                                             </dxg:GridColumn>
-                                            <dxg:GridColumn Header="" Width="30" FixedWidth="True">
+                                            <dxg:GridColumn Header="삭제" Width="40" FixedWidth="True">
                                                 <dxg:GridColumn.CellTemplate>
                                                     <DataTemplate>
                                                         <dx:SimpleButton Width="25" Height="25"

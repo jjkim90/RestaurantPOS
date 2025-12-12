@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:prism="http://prismlibrary.com/"
+             xmlns:dx="http://schemas.devexpress.com/winfx/2008/xaml/core"
              prism:ViewModelLocator.AutoWireViewModel="True"
              mc:Ignorable="d" 
              d:DesignHeight="800" d:DesignWidth="1200">
@@ -29,16 +30,15 @@
                            Foreground="#333333"/>
                 
                 <!-- 돌아가기 버튼 -->
-                <Button Grid.Column="1" 
-                        Content="돌아가기" 
-                        Command="{Binding BackCommand}"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        Width="100"
-                        Height="40"
-                        FontSize="16"
-                        Background="#F0F0F0"
-                        Foreground="#333333"/>
+                <dx:SimpleButton Grid.Column="1" 
+                                 Content="돌아가기" 
+                                 Command="{Binding BackCommand}"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Center"
+                                 Width="150"
+                                 Height="60"
+                                 FontSize="18"
+                                 Glyph="{dx:DXImage Image=Backward_32x32.png}"/>
             </Grid>
         </Border>
         

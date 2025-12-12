@@ -126,7 +126,7 @@
                 </Grid.ColumnDefinitions>
                 
                 <TextBlock Grid.Column="0" 
-                           Text="기본홀" 
+                           Text="테이블 관리" 
                            FontSize="24" 
                            FontWeight="Bold"
                            VerticalAlignment="Center"
@@ -136,10 +136,6 @@
                             Orientation="Horizontal" 
                             VerticalAlignment="Center"
                             Margin="20,0">
-                    <TextBlock Text="포장·배달·대기" 
-                               VerticalAlignment="Center" 
-                               Margin="0,0,10,0"
-                               FontSize="14"/>
                     <TextBlock Text="{Binding CurrentTime}" 
                                VerticalAlignment="Center"
                                FontSize="14"
@@ -149,13 +145,15 @@
                                      Width="100"
                                      Height="60"
                                      FontSize="16"
-                                     Command="{Binding NavigateToPaymentHistoryCommand}"/>
+                                     Command="{Binding NavigateToPaymentHistoryCommand}"
+                                     dx:ThemeManager.ThemeName="Office2019White"/>
                     <dx:SimpleButton Content="설정" 
                                      Margin="10,0,0,0"
                                      Width="100"
                                      Height="60"
                                      FontSize="16"
-                                     Command="{Binding NavigateToSettingsCommand}"/>
+                                     Command="{Binding NavigateToSettingsCommand}"
+                                     dx:ThemeManager.ThemeName="Office2019White"/>
                 </StackPanel>
             </Grid>
         </Border>

@@ -79,7 +79,8 @@
                                 <dxg:TableView ShowGroupPanel="False"
                                                AllowEditing="False"
                                                ShowVerticalLines="False"
-                                               ShowHorizontalLines="True">
+                                               ShowHorizontalLines="True"
+                                               ShowIndicator="False">
                                     <dxg:TableView.RowStyle>
                                         <Style TargetType="dxg:RowControl">
                                             <Setter Property="FontSize" Value="16"/>
@@ -90,7 +91,13 @@
                             </dxg:GridControl.View>
                             
                             <dxg:GridControl.Columns>
-                                <dxg:GridColumn FieldName="SpaceName" Header="홀 이름" Width="200" HorizontalHeaderContentAlignment="Center"/>
+                                <dxg:GridColumn FieldName="SpaceName" Header="홀 이름" Width="200" HorizontalHeaderContentAlignment="Center">
+                                    <dxg:GridColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Value}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </dxg:GridColumn.CellTemplate>
+                                </dxg:GridColumn>
                                 <dxg:GridColumn FieldName="TableCount" Header="테이블 수" Width="120" HorizontalHeaderContentAlignment="Center">
                                     <dxg:GridColumn.CellTemplate>
                                         <DataTemplate>
@@ -157,7 +164,8 @@
                                 <dxg:TableView ShowGroupPanel="False"
                                                AllowEditing="False"
                                                ShowVerticalLines="False"
-                                               ShowHorizontalLines="True">
+                                               ShowHorizontalLines="True"
+                                               ShowIndicator="False">
                                     <dxg:TableView.RowStyle>
                                         <Style TargetType="dxg:RowControl">
                                             <Setter Property="FontSize" Value="16"/>

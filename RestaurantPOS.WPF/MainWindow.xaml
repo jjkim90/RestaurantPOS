@@ -9,7 +9,7 @@
                  xmlns:local="clr-namespace:RestaurantPOS.WPF"
                  mc:Ignorable="d"
                  Title="Restaurant POS System" 
-                 Height="768" Width="1366" 
+                 Height="845" Width="1366" 
                  WindowState="Normal"
                  WindowStartupLocation="CenterScreen">
     <dx:ThemedWindow.HeaderItems>
@@ -18,43 +18,18 @@
     
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="25"/>
         </Grid.RowDefinitions>
         
-        <!-- Main Menu Bar -->
-        <dxb:BarContainerControl Grid.Row="0">
-            <dxb:MainMenuControl>
-                <dxb:BarSubItem Content="파일">
-                    <dxb:BarButtonItem Content="종료" Command="{Binding ExitCommand}"/>
-                </dxb:BarSubItem>
-                <dxb:BarSubItem Content="관리">
-                    <dxb:BarButtonItem Content="테이블 관리" Command="{Binding NavigateTableCommand}"/>
-                    <dxb:BarButtonItem Content="메뉴 관리" Command="{Binding NavigateMenuCommand}"/>
-                    <dxb:BarButtonItem Content="직원 관리" Command="{Binding NavigateEmployeeCommand}"/>
-                </dxb:BarSubItem>
-                <dxb:BarSubItem Content="매출">
-                    <dxb:BarButtonItem Content="일일 매출" Command="{Binding DailySalesCommand}"/>
-                    <dxb:BarButtonItem Content="월별 매출" Command="{Binding MonthlySalesCommand}"/>
-                </dxb:BarSubItem>
-                <dxb:BarSubItem Content="도움말">
-                    <dxb:BarButtonItem Content="정보" Command="{Binding AboutCommand}"/>
-                </dxb:BarSubItem>
-                <dxb:BarSubItem Content="테스트">
-                    <dxb:BarButtonItem Content="WebView2 테스트" Command="{Binding TestWebView2Command}"/>
-                </dxb:BarSubItem>
-            </dxb:MainMenuControl>
-        </dxb:BarContainerControl>
-        
         <!-- Main Content Region -->
-        <ContentControl Grid.Row="1" 
+        <ContentControl Grid.Row="0" 
                         x:Name="ContentRegion"
                         prism:RegionManager.RegionName="MainRegion"
                         Margin="5"/>
         
         <!-- Status Bar -->
-        <dxb:StatusBarControl Grid.Row="2">
+        <dxb:StatusBarControl Grid.Row="1">
             <dxb:StatusBarControl.Items>
                 <dxb:BarStaticItem Content="준비" Alignment="Near"/>
                 <dxb:BarStaticItem x:Name="CurrentTimeStatusBar" 

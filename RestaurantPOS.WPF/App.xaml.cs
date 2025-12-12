@@ -190,23 +190,6 @@ namespace RestaurantPOS.WPF
         {
             base.OnInitialized();
 
-            // WebView2 테스트를 위한 임시 코드
-            #if DEBUG
-            var testResult = System.Windows.MessageBox.Show(
-                "WebView2 테스트 창을 열까요?\n\n" +
-                "예: 테스트 창 열기\n" +
-                "아니오: 정상적으로 POS 실행", 
-                "WebView2 테스트", 
-                MessageBoxButton.YesNo, 
-                MessageBoxImage.Question);
-            
-            if (testResult == MessageBoxResult.Yes)
-            {
-                var testWindow = new WebView2TestWindow();
-                testWindow.ShowDialog();
-                return;
-            }
-            #endif
 
             try
             {
