@@ -17,6 +17,7 @@ namespace RestaurantPOS.WPF.Controls
         private PaymentRequestDto _paymentRequest;
         private string _clientKey;
         private bool _isInitialized = false;
+        private bool _navigationCancelledIntentionally = false;
 
         public PaymentWebView()
         {
@@ -175,7 +176,10 @@ namespace RestaurantPOS.WPF.Controls
             }
             else
             {
-                ShowError("페이지 로드 실패");
+                if (!_navigationCancelledIntentionally)
+                {
+                    ShowError("페이지 로드 실패");
+                }
             }
         }
 
@@ -204,6 +208,7 @@ namespace RestaurantPOS.WPF.Controls
 
                     if (!string.IsNullOrEmpty(paymentKey))
                     {
+                        _navigationCancelledIntentionally = true;
                         e.Cancel = true;
                         PaymentCompleted?.Invoke(this, new PaymentResultEventArgs
                         {
@@ -219,7 +224,8 @@ namespace RestaurantPOS.WPF.Controls
                     var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
                     var errorCode = query["code"];
                     var errorMessage = query["message"];
-                    
+
+                    _navigationCancelledIntentionally = true;
                     e.Cancel = true;
                     PaymentCompleted?.Invoke(this, new PaymentResultEventArgs
                     {
