@@ -11,7 +11,8 @@
                  Title="Restaurant POS System" 
                  Height="845" Width="1366" 
                  WindowState="Normal"
-                 WindowStartupLocation="CenterScreen">
+                 WindowStartupLocation="CenterScreen"
+                Icon="Resources/app.ico">
     <dx:ThemedWindow.HeaderItems>
         <TextBlock Text="Restaurant POS System" VerticalAlignment="Center" FontWeight="Bold" Margin="10,0"/>
     </dx:ThemedWindow.HeaderItems>
