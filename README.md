@@ -46,3 +46,6 @@ RestaurantPOS/
 ├── RestaurantPOS.Services/   # Business Logic Layer
 └── RestaurantPOS.Data/       # Data Access Layer
 ```
+
+---
+*Last updated: 2025-01*
