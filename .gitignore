@@ -42,3 +42,5 @@ appsettings.*.json
 
 # UI Reference folder
 UI/
+# Local dotnet CLI cache created during local builds or tool checks
+.dotnet/
