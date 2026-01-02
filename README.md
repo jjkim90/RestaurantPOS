@@ -1,51 +1,121 @@
 # RestaurantPOS
 
-음식점을 위한 Windows 기반 POS(Point of Sale) 시스템
+테이블, 주문, 결제 상태를 분리해 관리하는 WPF 기반 레스토랑 POS입니다.  
+추가 주문 시 신규 항목만 확정·출력되도록 흐름을 나눴고, 결제 완료 시 주문/테이블/결제 이력을 함께 갱신하도록 구성했습니다.  
+UI는 Prism 기반으로 모듈화했고, 상태 변경 책임은 서비스 계층에 모아 화면과 데이터 접근 로직의 결합을 줄였습니다.
 
-## 기술 스택
-- .NET 8.0
-- WPF (Windows Presentation Foundation)
-- Prism MVVM Framework
-- Entity Framework Core 8.0
-- SQL Server Express
+## 핵심 문제와 해결
 
-## 프로젝트 설정
+- 추가 주문이 발생한 테이블에서 전체 주문을 다시 출력하면 주방에 중복 전달이 생길 수 있습니다.  
+  신규 주문 항목을 분리해 관리하고, 확정 시점에만 출력 대상으로 넘기도록 구성했습니다.
 
-### 1. 사전 요구사항
-- Visual Studio 2022
-- .NET 8.0 SDK
-- SQL Server Express
+- 결제 완료 시 주문 상태, 테이블 상태, 결제 이력이 따로 반영되면 운영 상태가 어긋날 수 있습니다.  
+  결제 흐름의 상태 변경을 서비스 계층에서 하나의 저장 경계로 묶어 처리하도록 구성했습니다.
 
-### 2. 데이터베이스 설정
-1. SQL Server Express가 실행 중인지 확인
-2. `RestaurantPOS.WPF` 폴더에서 `appsettings.template.json`을 `appsettings.json`으로 복사
-3. 연결 문자열 수정 (필요한 경우)
-
-### 3. 빌드 및 실행
-```bash
-# 솔루션 빌드
-dotnet build
-
-# 실행
-dotnet run --project RestaurantPOS.WPF
-```
-
-첫 실행 시 데이터베이스가 자동으로 생성되고 초기 데이터가 입력됩니다.
+- WPF 화면이 늘어날수록 ViewModel이 데이터 접근과 상태 변경까지 직접 다루면 수정 범위가 커집니다.  
+  화면은 ViewModel, 상태 변경은 서비스, 저장은 Repository/UoW로 나눠 책임을 분리했습니다.
 
 ## 주요 기능
-- 테이블 관리 (공간별 테이블 배치)
-- 메뉴 관리 (카테고리별 분류)
-- 주문 처리
-- 결제 관리
+
+### 핵심 기능
+
+- 추가 주문 항목 분리 및 주방 출력
+- 결제 완료 시 주문/테이블/결제 이력 동시 갱신
+- 결제 취소 및 재결제 처리 로직
+- 결제 이력 조회와 거래 상태 추적 구조
+
+### 보조 기능
+
+- 공간 및 테이블 관리
+- 메뉴 카테고리 및 메뉴 관리
+- 영수증 출력 및 재출력
+- 초기 시드 데이터 구성
+
+## 기술 스택
+
+- C#, .NET 8, WPF
+- Prism
+  화면 기능을 모듈 단위로 나누고 ViewModel 중심 구조를 유지하기 위해 사용했습니다.
+- Entity Framework Core + SQL Server
+  주문, 테이블, 결제 이력 같은 상태 데이터를 관계형 모델로 관리하기 위해 사용했습니다.
+- Repository Pattern + Unit of Work
+  여러 상태 변경이 함께 일어나는 흐름에 저장 경계를 두기 위해 사용했습니다.
+- TossPayments + WebView2
+  카드 결제 화면을 앱 내부에서 열고, 결제 결과를 다시 앱 로직으로 연결하기 위해 사용했습니다.
+- DryIoc, DevExpress, AutoMapper, Serilog
+  DI 구성, 화면 구성, DTO 매핑, 로그 기록에 사용했습니다.
+
+## 아키텍처
+
+프로젝트는 `Core / Data / Services / WPF` 레이어로 분리되어 있습니다.
+
+- `Core`
+  엔티티, DTO, Enum, 인터페이스 정의
+- `Data`
+  `DbContext`, EF Core 설정, Repository, Unit of Work
+- `Services`
+  주문, 결제, 메뉴, 결제 이력, 출력 관련 비즈니스 로직
+- `WPF`
+  Prism 모듈 기반 UI와 ViewModel
+
+요청 흐름 예시:
+
+`View` -> `ViewModel` -> `Service` -> `UnitOfWork/Repository` -> `DbContext` -> `SQL Server`
+
+핵심 원칙은 세 가지입니다.
+
+- 상태 변경 책임은 서비스 계층에 둡니다.
+- ViewModel에서 직접 데이터 접근 세부 구현을 다루지 않습니다.
+- 주문/결제처럼 여러 변경이 함께 일어나는 흐름은 하나의 저장 경계로 묶습니다.
+
+## 핵심 구현 상세
+
+### 1. 추가 주문 항목 분리
+
+기존 주문과 신규 주문을 같은 목록으로만 처리하면, 추가 주문 시 기존 메뉴까지 다시 주방으로 전달될 수 있습니다.  
+이 프로젝트에서는 화면에서 기존 주문 항목과 신규 주문 항목을 나눠 관리하고, 확정 시점에만 신규 항목을 주문 흐름에 반영하도록 구성했습니다.  
+그 결과 추가 주문이 발생해도 이번에 추가된 메뉴만 주방 출력 대상으로 다룰 수 있게 했습니다.
+
+### 2. 결제 완료 시 상태 정합성 처리
+
+결제 완료 시점에는 결제 이력 생성, 주문 상태 변경, 테이블 상태 복구가 함께 일어나야 합니다.  
+이 중 일부만 저장되면 POS 운영 상태가 쉽게 어긋납니다.  
+이 프로젝트에서는 결제 관련 변경을 서비스 계층에서 하나의 트랜잭션 흐름으로 처리하도록 구성해, 상태 변경 책임을 한곳에 모았습니다.
+
+### 3. 거래 상태 추적 구조
+
+정상 결제 흐름만 처리하면 구현은 단순하지만, 운영 관점에서는 실패 상태를 구분할 수 있어야 합니다.  
+이 프로젝트에는 거래별 동기화 상태를 두고, 실패 상태 거래를 조회할 수 있는 구조와 재처리 진입용 서비스 구조를 두었습니다.  
+다만 재시도 로직 자체는 아직 단순한 형태이며, 운영 수준으로 더 정교하게 다듬을 여지가 남아 있습니다.
+
+## 실행 방법
+
+### 권장 실행 경로
+
+1. `.\SQLEXPRESS` 기준의 SQL Server Express 환경을 준비합니다.
+2. `RestaurantPOS.WPF/appsettings.template.json`을 참고해 `appsettings.json`을 준비합니다.
+3. Visual Studio에서 `RestaurantPOS.sln`을 열고 `RestaurantPOS.WPF`를 시작 프로젝트로 실행합니다.
+
+앱 시작 시 데이터베이스 생성 확인과 시드 데이터 입력 흐름이 포함되어 있어, 기본 데이터가 없는 경우 초기 데이터가 자동으로 구성되도록 작성되어 있습니다.
+
+### 참고 경로
+
+- `Scripts` 폴더에는 데이터베이스 생성용 SQL 스크립트가 포함되어 있습니다.
+- `apply-migration.bat`는 EF Core migration 적용용 보조 경로입니다.
+
+### 데모 가능 범위
+
+- SQL Server 환경이 준비되어 있으면 기본 테이블/주문 흐름은 데모 가능합니다.
+- 카드 결제는 TossPayments 키와 WebView2 환경이 필요합니다.
+- 프린터가 없으면 출력 관련 기능은 환경에 따라 정상 동작하지 않을 수 있습니다.
 
 ## 프로젝트 구조
-```
-RestaurantPOS/
-├── RestaurantPOS.WPF/        # Presentation Layer
-├── RestaurantPOS.Core/       # Domain Layer
-├── RestaurantPOS.Services/   # Business Logic Layer
-└── RestaurantPOS.Data/       # Data Access Layer
-```
 
----
-*Last updated: 2025-01*
+```text
+RestaurantPOS
+├─ RestaurantPOS.Core
+├─ RestaurantPOS.Data
+├─ RestaurantPOS.Services
+├─ RestaurantPOS.WPF
+└─ Scripts
+```
