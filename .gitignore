@@ -1,10 +1,10 @@
-# Visual Studio �ӽ� ����
+# Visual Studio 임시 파일
 .vs/
 *.user
 *.userosscache
 *.suo
 
-# ���� ���
+# 빌드 결과
 bin/
 obj/
 [Dd]ebug/
@@ -12,15 +12,15 @@ obj/
 x64/
 x86/
 
-# NuGet ��Ű��
+# NuGet 패키지
 packages/
 *.nupkg
 
-# �α� ����
+# 로그 파일
 *.log
 logs/
 
-# �����ͺ��̽� ����
+# 데이터베이스 파일
 *.mdf
 *.ldf
 
