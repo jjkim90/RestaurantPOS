@@ -1,0 +1,12 @@
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,csproj,props,targets,sln,xaml,config,sql,bat}]
+end_of_line = crlf
+
+[*.{md,gitignore,gitattributes,editorconfig,json,yml,yaml,txt}]
+end_of_line = lf
