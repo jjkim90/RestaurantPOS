@@ -4,6 +4,7 @@ using RestaurantPOS.Core.DTOs;
 using RestaurantPOS.Core.Entities;
 using RestaurantPOS.Core.Enums;
 using RestaurantPOS.Core.Interfaces;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -103,6 +104,9 @@ namespace RestaurantPOS.Services
             
             try
             {
+                Log.Information("주문 결제 DB 반영 시작 - OrderId: {OrderId}, PaymentMethod: {PaymentMethod}, PaymentKey: {PaymentKey}, TransactionId: {TransactionId}",
+                    orderId, paymentMethod, paymentKey, transactionId);
+
                 var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId);
                 if (order == null)
                     throw new InvalidOperationException("주문을 찾을 수 없습니다.");
@@ -145,6 +149,8 @@ namespace RestaurantPOS.Services
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
+                Log.Information("주문 결제 DB 반영 완료 - OrderId: {OrderId}", orderId);
+
                 // 업데이트된 주문 다시 조회
                 var updatedOrder = await _unitOfWork.OrderRepository.Query()
                     .Include(o => o.Table)
@@ -155,9 +161,11 @@ namespace RestaurantPOS.Services
 
                 return _mapper.Map<OrderDTO>(updatedOrder);
             }
-            catch
+            catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
+                Log.Error(ex, "주문 결제 DB 반영 실패 - OrderId: {OrderId}, PaymentMethod: {PaymentMethod}, PaymentKey: {PaymentKey}, TransactionId: {TransactionId}",
+                    orderId, paymentMethod, paymentKey, transactionId);
                 throw;
             }
         }

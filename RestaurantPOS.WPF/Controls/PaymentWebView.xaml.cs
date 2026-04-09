@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Newtonsoft.Json;
+using Serilog;
 
 namespace RestaurantPOS.WPF.Controls
 {
@@ -30,10 +31,12 @@ namespace RestaurantPOS.WPF.Controls
             try
             {
                 System.Diagnostics.Debug.WriteLine("InitializeWebView 시작");
+                Log.Information("PaymentWebView InitializeWebView 시작");
                 
                 if (PaymentWebView2 == null)
                 {
                     System.Diagnostics.Debug.WriteLine("PaymentWebView2가 null입니다!");
+                    Log.Error("PaymentWebView2가 null입니다.");
                     throw new InvalidOperationException("PaymentWebView2가 초기화되지 않았습니다.");
                 }
                 
@@ -45,6 +48,7 @@ namespace RestaurantPOS.WPF.Controls
                     "WebView2_UserData");
                 
                 System.Diagnostics.Debug.WriteLine($"WebView2 사용자 데이터 폴더: {userDataFolder}");
+                Log.Information("WebView2 사용자 데이터 폴더: {UserDataFolder}", userDataFolder);
                 
                 // 2. 폴더가 없으면 생성
                 if (!Directory.Exists(userDataFolder))
@@ -55,15 +59,18 @@ namespace RestaurantPOS.WPF.Controls
                 
                 // 3. 해당 경로로 WebView2 환경(Environment) 생성
                 System.Diagnostics.Debug.WriteLine("WebView2 환경 생성 중...");
+                Log.Information("WebView2 환경 생성 중");
                 var environment = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(
                     browserExecutableFolder: null, 
                     userDataFolder: userDataFolder);
                 System.Diagnostics.Debug.WriteLine("WebView2 환경 생성 완료");
+                Log.Information("WebView2 환경 생성 완료");
                 
                 // 4. 생성된 환경으로 EnsureCoreWebView2Async 호출
                 System.Diagnostics.Debug.WriteLine("EnsureCoreWebView2Async 호출 전");
                 await PaymentWebView2.EnsureCoreWebView2Async(environment);
                 System.Diagnostics.Debug.WriteLine("EnsureCoreWebView2Async 호출 완료");
+                Log.Information("EnsureCoreWebView2Async 호출 완료");
                 
                 // DevTools 활성화 (디버깅용)
                 #if DEBUG
@@ -91,10 +98,12 @@ namespace RestaurantPOS.WPF.Controls
                 System.Diagnostics.Debug.WriteLine("Navigation 이벤트 핸들러 등록");
                 
                 System.Diagnostics.Debug.WriteLine("InitializeWebView 완료");
+                Log.Information("PaymentWebView InitializeWebView 완료");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"InitializeWebView 오류: {ex.Message}");
+                Log.Error(ex, "PaymentWebView InitializeWebView 오류");
                 throw new Exception($"WebView2 초기화 실패: {ex.Message}", ex);
             }
         }
@@ -103,6 +112,8 @@ namespace RestaurantPOS.WPF.Controls
         public async Task InitializePayment(PaymentRequestDto paymentRequest, string clientKey)
         {
             System.Diagnostics.Debug.WriteLine("PaymentWebView.InitializePayment 시작");
+            Log.Information("PaymentWebView InitializePayment 시작 - OrderId: {OrderId}, Amount: {Amount}, ClientKeyPrefix: {ClientKeyPrefix}",
+                paymentRequest?.OrderId, paymentRequest?.Amount, string.IsNullOrEmpty(clientKey) ? "(empty)" : clientKey.Substring(0, Math.Min(12, clientKey.Length)));
             _paymentRequest = paymentRequest;
             _clientKey = clientKey;
 
@@ -126,6 +137,7 @@ namespace RestaurantPOS.WPF.Controls
                 
                 if (!File.Exists(htmlPath))
                 {
+                    Log.Error("payment.html 파일을 찾을 수 없습니다. Path: {HtmlPath}", htmlPath);
                     throw new FileNotFoundException("payment.html 파일을 찾을 수 없습니다.", htmlPath);
                 }
                 
@@ -134,14 +146,17 @@ namespace RestaurantPOS.WPF.Controls
                 // HTML 내용을 직접 읽어서 로드 (file:// 프로토콜의 보안 제한 회피)
                 var htmlContent = File.ReadAllText(htmlPath);
                 System.Diagnostics.Debug.WriteLine("HTML 파일 읽기 완료");
+                Log.Information("payment.html 파일 읽기 완료");
                 
                 // NavigateToString으로 HTML을 직접 로드
                 PaymentWebView2.CoreWebView2.NavigateToString(htmlContent);
                 System.Diagnostics.Debug.WriteLine("NavigateToString 호출 완료");
+                Log.Information("NavigateToString 호출 완료");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"InitializePayment 오류: {ex.Message}");
+                Log.Error(ex, "PaymentWebView InitializePayment 오류");
                 ShowError($"결제 초기화 실패: {ex.Message}");
             }
         }
@@ -152,6 +167,7 @@ namespace RestaurantPOS.WPF.Controls
             {
                 try
                 {
+                    Log.Information("PaymentWebView NavigationCompleted 성공");
                     // 페이지가 로드되면 결제 정보 전달
                     var paymentData = new
                     {
@@ -171,11 +187,13 @@ namespace RestaurantPOS.WPF.Controls
                 }
                 catch (Exception ex)
                 {
+                    Log.Error(ex, "결제 정보 전달 실패");
                     ShowError($"결제 정보 전달 실패: {ex.Message}");
                 }
             }
             else
             {
+                Log.Error("PaymentWebView NavigationCompleted 실패");
                 if (!_navigationCancelledIntentionally)
                 {
                     ShowError("페이지 로드 실패");
@@ -186,6 +204,7 @@ namespace RestaurantPOS.WPF.Controls
         private void OnNavigationStarting(object sender, CoreWebView2NavigationStartingEventArgs e)
         {
             System.Diagnostics.Debug.WriteLine($"Navigation starting to: {e.Uri}");
+            Log.Information("PaymentWebView NavigationStarting - Uri: {Uri}", e.Uri);
             
             // 결제 완료/실패 URL 체크
             try
@@ -238,6 +257,7 @@ namespace RestaurantPOS.WPF.Controls
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Navigation URL parsing error: {ex.Message}");
+                Log.Error(ex, "Navigation URL parsing error");
             }
         }
 
@@ -246,6 +266,7 @@ namespace RestaurantPOS.WPF.Controls
             try
             {
                 var message = e.TryGetWebMessageAsString();
+                Log.Information("PaymentWebView WebMessageReceived: {Message}", message);
                 dynamic data = JsonConvert.DeserializeObject(message);
                 
                 string action = data.action;
@@ -276,12 +297,14 @@ namespace RestaurantPOS.WPF.Controls
                         break;
                         
                     case "error":
+                        Log.Error("PaymentWebView error message from web content: {Message}", data.message.ToString());
                         ShowError(data.message.ToString());
                         break;
                 }
             }
             catch (Exception ex)
             {
+                Log.Error(ex, "메시지 처리 실패");
                 ShowError($"메시지 처리 실패: {ex.Message}");
             }
         }
@@ -303,6 +326,7 @@ namespace RestaurantPOS.WPF.Controls
 
         private void ShowError(string message)
         {
+            Log.Error("PaymentWebView ShowError: {Message}", message);
             ErrorMessage.Text = message;
             LoadingOverlay.Visibility = Visibility.Collapsed;
             PaymentWebView2.Visibility = Visibility.Collapsed;

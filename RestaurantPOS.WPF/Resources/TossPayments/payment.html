@@ -181,9 +181,9 @@
                     customerName: paymentRequest.CustomerName,
                     customerEmail: paymentRequest.CustomerEmail,
                     customerMobilePhone: paymentRequest.CustomerMobilePhone,
-                    successUrl: paymentRequest.SuccessUrl || 'https://www.example.com/success',
-                    failUrl: paymentRequest.FailUrl || 'https://www.example.com/fail',
-                    windowTarget: 'iframe',
+                    successUrl: paymentRequest.SuccessUrl || 'restaurantpos://payment/success',
+                    failUrl: paymentRequest.FailUrl || 'restaurantpos://payment/fail',
+                    windowTarget: 'self',
                     flowMode: paymentRequest.FlowMode || 'DEFAULT'
                 };
                 

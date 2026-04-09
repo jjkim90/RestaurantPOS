@@ -170,8 +170,8 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
                     CustomerName = "매장고객",
                     CustomerEmail = "customer@restaurant.com",
                     CustomerMobilePhone = "01012345678",
-                    SuccessUrl = "https://www.example.com/success",
-                    FailUrl = "https://www.example.com/fail"
+                    SuccessUrl = "restaurantpos://payment/success",
+                    FailUrl = "restaurantpos://payment/fail"
                 };
 
                 System.Diagnostics.Debug.WriteLine("결제 요청 데이터 생성 완료");
@@ -179,9 +179,31 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
                 System.Diagnostics.Debug.WriteLine($"Amount: {paymentRequest.Amount}");
                 System.Diagnostics.Debug.WriteLine($"OrderName: {paymentRequest.OrderName}");
                 
-                // 결제창 초기화
                 var clientKey = _tossPaymentsService.GetClientKey();
+                var secretKey = _tossPaymentsService.GetSecretKey();
                 System.Diagnostics.Debug.WriteLine($"Client Key: {clientKey}");
+
+                if (string.IsNullOrWhiteSpace(clientKey))
+                {
+                    System.Windows.MessageBox.Show(
+                        "카드 결제를 사용하려면 RestaurantPOS.WPF\\appsettings.json 파일의 TossPayments:ClientKey 설정이 필요합니다.\n\n" +
+                        "appsettings.template.json을 복사해 appsettings.json을 만든 뒤 테스트용 ClientKey/SecretKey를 입력해주세요.",
+                        "결제 설정 필요",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(secretKey))
+                {
+                    System.Windows.MessageBox.Show(
+                        "카드 결제를 승인하려면 RestaurantPOS.WPF\\appsettings.json 파일의 TossPayments:SecretKey 설정이 필요합니다.\n\n" +
+                        "appsettings.template.json을 복사해 appsettings.json을 만든 뒤 테스트용 ClientKey/SecretKey를 입력해주세요.",
+                        "결제 설정 필요",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
                 
                 _paymentWindow = paymentWebViewWindow;
                 System.Diagnostics.Debug.WriteLine($"Window 생성 확인 - IsLoaded: {paymentWebViewWindow.IsLoaded}");

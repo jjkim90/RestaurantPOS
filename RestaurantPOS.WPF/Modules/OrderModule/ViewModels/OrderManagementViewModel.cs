@@ -6,6 +6,7 @@ using RestaurantPOS.Core.DTOs;
 using RestaurantPOS.Core.Entities;
 using RestaurantPOS.Core.Interfaces;
 using RestaurantPOS.WPF.Modules.OrderModule.Views;
+using Serilog;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -387,6 +388,9 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
 
                 if (paymentProcessed)
                 {
+                    Log.Information("결제 완료 이벤트 수신 - OrderId: {OrderId}, PaymentMethod: {PaymentMethod}, PaymentKey: {PaymentKey}, TransactionId: {TransactionId}",
+                        _currentOrderId, paymentMethod, paymentKey, transactionId);
+
                     // 결제 처리
                     var completedOrder = await _orderService.ProcessPaymentAsync(_currentOrderId, paymentMethod, paymentKey, transactionId);
                     
@@ -428,6 +432,7 @@ namespace RestaurantPOS.WPF.Modules.OrderModule.ViewModels
             }
             catch (Exception ex)
             {
+                Log.Error(ex, "결제 처리 중 오류 - CurrentOrderId: {OrderId}", _currentOrderId);
                 System.Windows.MessageBox.Show($"결제 처리 중 오류가 발생했습니다: {ex.Message}", "오류", 
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
