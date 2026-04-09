@@ -4,6 +4,11 @@ using Prism.Ioc;
 using Prism.Mvvm;
 using Prism.Regions;
 using System;
+using System.Drawing;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace RestaurantPOS.WPF
@@ -13,11 +18,43 @@ namespace RestaurantPOS.WPF
     /// </summary>
     public partial class MainWindow : ThemedWindow
     {
+        private const int IconBig = 1;
+        private const int IconSmall = 0;
+        private const int WmSetIcon = 0x0080;
+
         public MainWindow()
         {
             InitializeComponent();
             DataContext = new MainWindowViewModel();
+            SourceInitialized += OnSourceInitialized;
         }
+
+        private void OnSourceInitialized(object? sender, EventArgs e)
+        {
+            ApplyWindowIcons();
+        }
+
+        private void ApplyWindowIcons()
+        {
+            var iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "app.ico");
+            if (!File.Exists(iconPath))
+            {
+                return;
+            }
+
+            using var icon = new Icon(iconPath);
+            Icon = Imaging.CreateBitmapSourceFromHIcon(
+                icon.Handle,
+                System.Windows.Int32Rect.Empty,
+                BitmapSizeOptions.FromEmptyOptions());
+
+            var windowHandle = new WindowInteropHelper(this).Handle;
+            SendMessage(windowHandle, WmSetIcon, (IntPtr)IconSmall, icon.Handle);
+            SendMessage(windowHandle, WmSetIcon, (IntPtr)IconBig, icon.Handle);
+        }
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
     }
 
     public class MainWindowViewModel : BindableBase
