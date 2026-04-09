@@ -1,5 +1,6 @@
 using RestaurantPOS.Core.DTOs;
 using RestaurantPOS.Core.Interfaces;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -9,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using Serilog;
 
 namespace RestaurantPOS.Services
 {
@@ -18,19 +20,43 @@ namespace RestaurantPOS.Services
         private const string STORE_PHONE = "Tel: 02-1234-5678";
         private const string SEPARATOR_LINE = "=====================================";
         private const string DASH_LINE = "-------------------------------------";
+        private readonly bool _disablePrinting;
+
+        public PrintService(IConfiguration? configuration = null)
+        {
+            _disablePrinting = configuration?.GetValue<bool>("PrinterSettings:DisablePrinting") ?? false;
+        }
 
         public async Task<bool> PrintReceiptAsync(OrderDTO order)
         {
+            if (_disablePrinting)
+            {
+                Log.Information("영수증 출력 건너뜀 - DisablePrinting 활성화, OrderNumber: {OrderNumber}", order.OrderNumber);
+                return true;
+            }
+
             return await PrintReceiptInternalAsync(order, false);
         }
 
         public async Task<bool> ReprintReceiptAsync(OrderDTO order)
         {
+            if (_disablePrinting)
+            {
+                Log.Information("영수증 재출력 건너뜀 - DisablePrinting 활성화, OrderNumber: {OrderNumber}", order.OrderNumber);
+                return true;
+            }
+
             return await PrintReceiptInternalAsync(order, true);
         }
 
         public async Task<bool> PrintReceiptForPaymentHistoryAsync(PaymentHistoryDTO paymentHistory)
         {
+            if (_disablePrinting)
+            {
+                Log.Information("결제내역 영수증 출력 건너뜀 - DisablePrinting 활성화, OrderNumber: {OrderNumber}", paymentHistory.OrderNumber);
+                return true;
+            }
+
             // PaymentHistoryDTO를 OrderDTO로 변환
             var order = new OrderDTO
             {
@@ -336,6 +362,12 @@ namespace RestaurantPOS.Services
 
         public async Task<bool> PrintKitchenOrderAsync(OrderDTO order, IEnumerable<OrderDetailDTO> newItems)
         {
+            if (_disablePrinting)
+            {
+                Log.Information("주방 주문서 출력 건너뜀 - DisablePrinting 활성화, OrderNumber: {OrderNumber}", order.OrderNumber);
+                return true;
+            }
+
             try
             {
                 // UI 스레드에서 실행되어야 함
